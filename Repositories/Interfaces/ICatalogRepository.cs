@@ -16,21 +16,21 @@ namespace TrendLine.Repositories.Interfaces
         Task<IEnumerable<Category>> GetAllCategories();
         Task<Category> GetCategoryById(int id);
         Task AddCategory(CategoryDTO category);
-        Task UpdateCategory(CategoryDTO category, int id);  // Use CategoryDTO instead of Category
+        Task UpdateCategory(CategoryDTO category, int id);
         Task DeleteCategory(int id);
 
         // Color CRUD operations
         Task<IEnumerable<Color>> GetAllColors();
         Task<Color> GetColorById(int id);
-        Task AddColor(ColorDTO color);                      // Use ColorDTO instead of Color
-        Task UpdateColor(ColorDTO color, int id);           // Use ColorDTO instead of Color
+        Task AddColor(ColorDTO color);
+        Task UpdateColor(ColorDTO color, int id);
         Task DeleteColor(int id);
 
         // Size CRUD operations
         Task<IEnumerable<Size>> GetAllSizes();
         Task<Size> GetSizeById(int id);
-        Task AddSize(SizeDTO size);                         // Use SizeDTO instead of Size
-        Task UpdateSize(SizeDTO size, int id);              // Use SizeDTO instead of Size
+        Task AddSize(SizeDTO size);
+        Task UpdateSize(SizeDTO size, int id);
         Task DeleteSize(int id);
     }
 }

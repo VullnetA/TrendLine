@@ -9,7 +9,6 @@
         public string PhoneNumber { get; set; }
         public string Address { get; set; }
 
-        // Other properties as needed
         public ICollection<OrderDTO> Orders { get; set; }
     }
 }

@@ -63,7 +63,6 @@ namespace TrendLine.Repositories.Implementations
 
         public async Task<IEnumerable<Order>> GetOrdersByDateRange(DateTime startDate, DateTime endDate)
         {
-            // Ensure that the DateTime values used in the query are UTC
             return await _context.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)

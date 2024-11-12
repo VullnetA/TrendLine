@@ -33,7 +33,8 @@ namespace TrendLine.Models
         {
             if (Discount == null || (Discount.ExpirationDate.HasValue && Discount.ExpirationDate < DateTime.UtcNow))
             {
-                return Price; // No discount or expired discount
+                // No discount or expired discount
+                return Price;
             }
 
             // Apply discount based on percentage or fixed amount

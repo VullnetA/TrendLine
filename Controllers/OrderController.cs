@@ -34,6 +34,7 @@ namespace TrendLine.Controllers
             return Ok(response);
         }
 
+        // Only a customer can create an order
         [HttpPost]
         [Authorize(Roles = "Customer")]
         public async Task<ActionResult> CreateOrder(CreateOrderDTO orderDto)
@@ -85,7 +86,7 @@ namespace TrendLine.Controllers
         [Authorize(Roles = "Admin, Advanced User")]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByDateRange(DateTime startDate, DateTime endDate)
         {
-            // Ensure DateTime values are in UTC
+            // Ensuring DateTime values are in UTC due to conversion issues
             startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
             endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
 

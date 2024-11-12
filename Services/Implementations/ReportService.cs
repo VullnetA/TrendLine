@@ -41,7 +41,7 @@ namespace TrendLine.Services.Implementations
         {
             var today = DateTime.UtcNow.Date;
             var salesData = await _context.Orders
-                .Where(o => o.OrderDate >= today && o.OrderDate < today.AddDays(1) && o.Status == "Completed")
+                .Where(o => o.OrderDate >= today && o.OrderDate < today.AddDays(1) && o.Status == "Delivered")
                 .SelectMany(o => o.OrderItems)
                 .GroupBy(oi => oi.ProductId)
                 .Select(g => new
@@ -58,9 +58,9 @@ namespace TrendLine.Services.Implementations
 
         private async Task<string> GenerateMonthlySalesReport()
         {
-            var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var salesData = await _context.Orders
-                .Where(o => o.OrderDate >= firstOfMonth && o.OrderDate < firstOfMonth.AddMonths(1) && o.Status == "Completed")
+                .Where(o => o.OrderDate >= firstOfMonth && o.OrderDate < firstOfMonth.AddMonths(1) && o.Status == "Delivered")
                 .SelectMany(o => o.OrderItems)
                 .GroupBy(oi => oi.ProductId)
                 .Select(g => new
@@ -74,6 +74,7 @@ namespace TrendLine.Services.Implementations
 
             return JsonConvert.SerializeObject(salesData);
         }
+
 
         private async Task<string> GenerateTopProductsReport()
         {

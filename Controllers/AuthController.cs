@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TrendLine.Data;
 using TrendLine.DTOs;
-using TrendLine.Models;  // Ensure this namespace includes ApplicationUser
+using TrendLine.Models;
 using TrendLine.Services.AuthenticationService;
 
 namespace TrendLine.Controllers
@@ -94,7 +94,7 @@ namespace TrendLine.Controllers
                 UserId = userInDb.Id,
                 Email = userInDb.Email,
                 Token = accessToken,
-                Roles = roles // Add this line to include the roles
+                Roles = roles
             });
         }
 
@@ -129,11 +129,9 @@ namespace TrendLine.Controllers
         [HttpPost("registerCustomer")]
         public async Task<ActionResult> RegisterCustomer(CustomerRegistrationDTO registrationDto)
         {
-            // Check if the user already exists
             var userExists = await _userManager.FindByEmailAsync(registrationDto.Email);
             if (userExists != null) return BadRequest("User already exists");
 
-            // Ensure the "Customer" role exists, and create it if it doesn't
             if (!await _roleManager.RoleExistsAsync("Customer"))
             {
                 var roleResult = await _roleManager.CreateAsync(new IdentityRole("Customer"));
@@ -143,7 +141,6 @@ namespace TrendLine.Controllers
                 }
             }
 
-            // Create ApplicationUser and set required fields
             var user = new ApplicationUser
             {
                 Email = registrationDto.Email,
@@ -154,14 +151,11 @@ namespace TrendLine.Controllers
                 PhoneNumber = registrationDto.PhoneNumber
             };
 
-            // Create the user in the database
             var result = await _userManager.CreateAsync(user, registrationDto.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
-            // Assign Customer role to the new user
             await _userManager.AddToRoleAsync(user, "Customer");
 
-            // Create Customer entity with additional details
             var customer = new Customer
             {
                 UserId = user.Id,
@@ -175,7 +169,5 @@ namespace TrendLine.Controllers
 
             return Ok("Customer registered successfully");
         }
-
-
     }
 }
