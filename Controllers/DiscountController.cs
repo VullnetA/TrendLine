@@ -18,7 +18,7 @@ namespace TrendLine.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<Discount>>> GetAllDiscounts()
         {
             var discounts = await _discountService.GetAllDiscounts();
@@ -26,7 +26,7 @@ namespace TrendLine.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Discount>> GetDiscountById(int id)
         {
             try

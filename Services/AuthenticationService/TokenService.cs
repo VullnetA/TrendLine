@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using TrendLine.Models;  // Ensure you have a reference to where ApplicationUser is defined
+using TrendLine.Models;
 
 namespace TrendLine.Services.AuthenticationService
 {
@@ -47,7 +47,7 @@ namespace TrendLine.Services.AuthenticationService
         {
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(ClaimTypes.NameIdentifier, user.Id) // Add user ID as NameIdentifier
+            new Claim(ClaimTypes.NameIdentifier, user.Id)
         };
 
             foreach (var role in roles)

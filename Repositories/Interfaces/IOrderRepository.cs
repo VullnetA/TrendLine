@@ -9,7 +9,6 @@ namespace TrendLine.Repositories.Interfaces
         Task AddOrder(Order order);
         Task UpdateOrder(Order order);
         Task DeleteOrder(int id);
-
         Task<IEnumerable<Order>> GetOrdersByStatus(string status);
         Task<IEnumerable<Order>> GetOrdersByDateRange(DateTime startDate, DateTime endDate);
         Task<IEnumerable<OrderItem>> GetOrderItemsByOrderId(int orderId);

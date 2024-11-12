@@ -17,6 +17,7 @@ namespace TrendLine.Controllers
             _customerService = customerService;
         }
 
+        // An admin can retrieve all customers
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<CustomerDTO>>> GetAllCustomers()

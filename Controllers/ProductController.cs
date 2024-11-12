@@ -57,6 +57,7 @@ namespace TrendLine.Controllers
             return Ok();
         }
 
+        // The following are seaparate methods to filter products by different attributes
         [HttpGet("byCategory/{category}")]
         [Authorize(Roles = "Admin, Advanced User, Simple User, Customer")]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByCategory(string category)
@@ -179,6 +180,5 @@ namespace TrendLine.Controllers
 
             return Ok(products);
         }
-
     }
 }

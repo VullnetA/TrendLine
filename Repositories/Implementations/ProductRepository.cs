@@ -237,10 +237,9 @@ namespace TrendLine.Repositories.Implementations
 
             if (!string.IsNullOrEmpty(searchParams.Gender))
             {
-                // Client-side evaluation for Gender filtering
                 query = query.AsEnumerable()
                              .Where(p => p.Gender.ToString().Equals(searchParams.Gender, StringComparison.OrdinalIgnoreCase))
-                             .AsQueryable(); // Convert back to IQueryable if needed
+                             .AsQueryable();
             }
 
             if (!string.IsNullOrEmpty(searchParams.Brand))
@@ -273,7 +272,6 @@ namespace TrendLine.Repositories.Implementations
                 query = query.Where(p => searchParams.InStock.Value ? p.Quantity > 0 : p.Quantity == 0);
             }
 
-            // Use synchronous ToList() after client-side evaluation
             return query.ToList();
         }
     }
