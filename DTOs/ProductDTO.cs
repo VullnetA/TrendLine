@@ -1,4 +1,6 @@
-﻿namespace TrendLine.DTOs
+﻿using TrendLine.Models;
+
+namespace TrendLine.DTOs
 {
     public class ProductDTO
     {
@@ -13,5 +15,6 @@
         public string Category { get; set; }
         public string Color { get; set; }
         public string Size { get; set; }
+        public List<Link> Links { get; set; } = new List<Link>();
     }
 }

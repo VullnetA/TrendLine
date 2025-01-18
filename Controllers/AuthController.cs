@@ -1,21 +1,34 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TrendLine.Data;
 using TrendLine.DTOs;
 using TrendLine.Models;
 using TrendLine.Services.AuthenticationService;
+using TrendLine.Services.Helpers;
 
 namespace TrendLine.Controllers
 {
+    /// <summary>
+    /// Handles authentication-related operations such as registration, login, and role management.
+    /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")] // Define version 1.0
+    [ApiVersion("2.0")] // Define version 2.0 for future updates
+    [Route("api/v{version:apiVersion}/[controller]")] // Include API version in the route
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly AppDbContext _context;
         private readonly TokenService _tokenService;
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AuthController"/> class.
+        /// </summary>
+        /// <param name="userManager">Service for managing users.</param>
+        /// <param name="roleManager">Service for managing roles.</param>
+        /// <param name="context">Application database context.</param>
+        /// <param name="tokenService">Service for generating authentication tokens.</param>
         public AuthController(UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             AppDbContext context,
@@ -27,14 +40,24 @@ namespace TrendLine.Controllers
             _tokenService = tokenService;
         }
 
+        /// <summary>
+        /// Registers a new user.
+        /// </summary>
+        /// <param name="request">The registration request containing user details.</param>
+        /// <returns>Status of the registration operation.</returns>
+        /// <response code="200">User created successfully.</response>
+        /// <response code="400">User already exists or invalid request.</response>
         [HttpPost("register")]
+        [MapToApiVersion("1.0")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         public async Task<ActionResult> Register(RegistrationRequestDTO request)
         {
             var userExists = await _userManager.FindByEmailAsync(request.Email);
 
             if (userExists != null)
             {
-                return BadRequest("User already exists");
+                return ErrorResponseHelper.BadRequestResponse(this, "User already exists");
             }
 
             var user = new ApplicationUser
@@ -51,37 +74,48 @@ namespace TrendLine.Controllers
 
             if (!result.Succeeded)
             {
-                return BadRequest(result.Errors);
+                return ErrorResponseHelper.BadRequestResponse(this, "User creation failed", result.Errors);
             }
 
             return Ok("User created successfully");
         }
 
-
+        /// <summary>
+        /// Authenticates a user and generates a JWT token.
+        /// </summary>
+        /// <param name="request">The authentication request containing email and password.</param>
+        /// <returns>An authentication response containing the JWT token and user details.</returns>
+        /// <response code="200">Authentication successful.</response>
+        /// <response code="400">Invalid credentials or request.</response>
+        /// <response code="401">Unauthorized access.</response>
         [HttpPost("login")]
+        [MapToApiVersion("1.0")]
+        [ProducesResponseType(typeof(AuthResponseDTO), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(401)]
         public async Task<ActionResult<AuthResponseDTO>> Authenticate([FromBody] AuthRequestDTO request)
         {
             if (request == null)
             {
-                return BadRequest("Request body is empty");
+                return ErrorResponseHelper.BadRequestResponse(this, "Request body is empty");
             }
 
             var managedUser = await _userManager.FindByEmailAsync(request.Email);
             if (managedUser == null)
             {
-                return BadRequest("No user found");
+                return ErrorResponseHelper.BadRequestResponse(this, "No user found");
             }
 
             var isPasswordValid = await _userManager.CheckPasswordAsync(managedUser, request.Password);
             if (!isPasswordValid)
             {
-                return BadRequest("Bad credentials");
+                return ErrorResponseHelper.BadRequestResponse(this, "Bad credentials");
             }
 
             var userInDb = _context.Users.FirstOrDefault(u => u.Email == request.Email);
             if (userInDb is null)
             {
-                return Unauthorized();
+                return ErrorResponseHelper.UnauthorizedResponse(this, "Authentication failed");
             }
 
             var roles = await _userManager.GetRolesAsync(managedUser);
@@ -98,8 +132,15 @@ namespace TrendLine.Controllers
             });
         }
 
-
+        /// <summary>
+        /// Creates a new role.
+        /// </summary>
+        /// <param name="roleName">The name of the role to create.</param>
+        /// <returns>Status of the role creation operation.</returns>
+        /// <response code="200">Role created successfully.</response>
         [HttpPost("role")]
+        [MapToApiVersion("1.0")]
+        [ProducesResponseType(200)]
         public async Task<ActionResult> CreateRoles(string roleName)
         {
             if (!await _roleManager.RoleExistsAsync(roleName))
@@ -109,35 +150,68 @@ namespace TrendLine.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Assigns a role to a user.
+        /// </summary>
+        /// <param name="username">The username of the user.</param>
+        /// <param name="roleName">The name of the role to assign.</param>
+        /// <returns>Status of the role assignment operation.</returns>
+        /// <response code="200">Role assigned successfully.</response>
+        /// <response code="400">Invalid username or role name.</response>
         [HttpPost("assign")]
+        [MapToApiVersion("2.0")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         public async Task<ActionResult> AssignRoleToUser(string username, string roleName)
         {
-            var user = await _userManager.FindByNameAsync(username)
-                ?? throw new ApplicationException($"User with username '{username}' not found.");
-            if (!await _roleManager.RoleExistsAsync(roleName))
+            try
             {
-                throw new ApplicationException($"Role '{roleName}' does not exist.");
-            }
+                var user = await _userManager.FindByNameAsync(username)
+                    ?? throw new ApplicationException($"User with username '{username}' not found.");
 
-            if (!await _userManager.IsInRoleAsync(user, roleName))
-            {
-                await _userManager.AddToRoleAsync(user, roleName);
+                if (!await _roleManager.RoleExistsAsync(roleName))
+                {
+                    throw new ApplicationException($"Role '{roleName}' does not exist.");
+                }
+
+                if (!await _userManager.IsInRoleAsync(user, roleName))
+                {
+                    await _userManager.AddToRoleAsync(user, roleName);
+                }
+
+                return Ok();
             }
-            return Ok();
+            catch (ApplicationException ex)
+            {
+                return ErrorResponseHelper.BadRequestResponse(this, ex.Message);
+            }
         }
 
+        /// <summary>
+        /// Registers a new customer.
+        /// </summary>
+        /// <param name="registrationDto">The registration details for the customer.</param>
+        /// <returns>Status of the customer registration operation.</returns>
+        /// <response code="200">Customer registered successfully.</response>
+        /// <response code="400">Customer already exists or invalid request.</response>
         [HttpPost("registerCustomer")]
+        [MapToApiVersion("2.0")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         public async Task<ActionResult> RegisterCustomer(CustomerRegistrationDTO registrationDto)
         {
             var userExists = await _userManager.FindByEmailAsync(registrationDto.Email);
-            if (userExists != null) return BadRequest("User already exists");
+            if (userExists != null)
+            {
+                return ErrorResponseHelper.BadRequestResponse(this, "User already exists");
+            }
 
             if (!await _roleManager.RoleExistsAsync("Customer"))
             {
                 var roleResult = await _roleManager.CreateAsync(new IdentityRole("Customer"));
                 if (!roleResult.Succeeded)
                 {
-                    return StatusCode(500, "Error creating Customer role");
+                    return ErrorResponseHelper.InternalServerErrorResponse(this, "Error creating Customer role", new Exception("Role creation failed"));
                 }
             }
 
@@ -152,7 +226,10 @@ namespace TrendLine.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, registrationDto.Password);
-            if (!result.Succeeded) return BadRequest(result.Errors);
+            if (!result.Succeeded)
+            {
+                return ErrorResponseHelper.BadRequestResponse(this, "User creation failed", result.Errors);
+            }
 
             await _userManager.AddToRoleAsync(user, "Customer");
 
