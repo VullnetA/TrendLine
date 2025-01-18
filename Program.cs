@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using TrendLine.Data;
+using TrendLine.GraphQL;
 using TrendLine.Models;
 using TrendLine.Repositories.Implementations;
 using TrendLine.Repositories.Interfaces;
@@ -90,9 +91,24 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IDiscountService, DiscountService>();
 
+builder.Services.AddScoped<Query>();
+builder.Services.AddScoped<Mutation>();
+
 builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddAutoMapper(typeof(Program));
+
+builder.Services
+    .AddGraphQLServer()
+    .AddQueryType<Query>() // Register Query
+    .AddMutationType<Mutation>() // Register Mutation
+    .AddSubscriptionType<Subscription>() // If using Subscriptions
+    .AddProjections() // Enables EF Core projections
+    .AddFiltering() // Enables filtering
+    .AddSorting() // Enables sorting
+    .ModifyRequestOptions(options => options.IncludeExceptionDetails = true) // For debugging
+    .AddInMemorySubscriptions(); // Enables in-memory subscriptions
+
 
 builder.Services.AddCors(options =>
 {
@@ -129,12 +145,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors();
+app.UseCors(); // CORS must come first
 app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthentication(); // Enable authentication
+app.UseAuthorization(); // Enable authorization
+app.UseWebSockets(); // Required for subscriptions
+app.MapGraphQL(); // Map GraphQL after WebSocket middleware
+app.MapControllers(); // REST API controllers
 
-
-app.MapControllers();
 
 app.Run();

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using TrendLine.DTOs;
 using TrendLine.Models;
 using TrendLine.Services.Interfaces;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace TrendLine.Controllers
 {

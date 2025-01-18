@@ -20,7 +20,7 @@ namespace TrendLine.Controllers
 
         // Brand Endpoints
         [HttpGet("brands")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<BrandDTO>>> GetAllBrands()
         {
             var response = await _catalogService.GetAllBrands();
@@ -29,7 +29,7 @@ namespace TrendLine.Controllers
         }
 
         [HttpGet("brands/{id}")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<BrandDTO>> GetBrandById(int id)
         {
             var response = await _catalogService.GetBrandById(id);
@@ -63,7 +63,7 @@ namespace TrendLine.Controllers
 
         // Category Endpoints
         [HttpGet("categories")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<CategoryDTO>>> GetAllCategories()
         {
             var response = await _catalogService.GetAllCategories();
@@ -72,7 +72,7 @@ namespace TrendLine.Controllers
         }
 
         [HttpGet("categories/{id}")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<CategoryDTO>> GetCategoryById(int id)
         {
             var response = await _catalogService.GetCategoryById(id);
@@ -106,7 +106,7 @@ namespace TrendLine.Controllers
 
         // Color Endpoints
         [HttpGet("colors")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<ColorDTO>>> GetAllColors()
         {
             var response = await _catalogService.GetAllColors();
@@ -115,7 +115,7 @@ namespace TrendLine.Controllers
         }
 
         [HttpGet("colors/{id}")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ColorDTO>> GetColorById(int id)
         {
             var response = await _catalogService.GetColorById(id);
@@ -149,7 +149,7 @@ namespace TrendLine.Controllers
 
         // Size Endpoints
         [HttpGet("sizes")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<SizeDTO>>> GetAllSizes()
         {
             var response = await _catalogService.GetAllSizes();
@@ -158,7 +158,7 @@ namespace TrendLine.Controllers
         }
 
         [HttpGet("sizes/{id}")]
-        [Authorize(Roles = "Admin, User")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<SizeDTO>> GetSizeById(int id)
         {
             var response = await _catalogService.GetSizeById(id);
