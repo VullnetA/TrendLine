@@ -3,6 +3,7 @@ using TrendLine.DTOs;
 using TrendLine.Models;
 using TrendLine.Repositories.Interfaces;
 using TrendLine.Services.Interfaces;
+using HotChocolate.Subscriptions;
 
 namespace TrendLine.Services.Implementations
 {
@@ -10,11 +11,13 @@ namespace TrendLine.Services.Implementations
     {
         private readonly IMapper _mapper;
         private readonly IProductRepository _productRepository;
+        private readonly ITopicEventSender _eventSender;
 
-        public ProductService(IMapper mapper, IProductRepository productRepository)
+        public ProductService(IMapper mapper, IProductRepository productRepository, ITopicEventSender eventSender)
         {
             _mapper = mapper;
             _productRepository = productRepository;
+            _eventSender = eventSender;
         }
 
         public async Task AddProduct(AddProductDTO productDto)
@@ -119,6 +122,10 @@ namespace TrendLine.Services.Implementations
         public async Task UpdateQuantity(int productId, int quantity)
         {
             await _productRepository.UpdateQuantity(productId, quantity);
+
+            // Publish stock change event
+            var updatedProduct = await GetProductById(productId);
+            await _eventSender.SendAsync("ProductStockUpdated", updatedProduct);
         }
 
         public async Task<ProductQuantityDTO> GetProductQuantity(int productId)
