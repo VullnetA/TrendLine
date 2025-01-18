@@ -2,6 +2,7 @@
 using TrendLine.Models;
 using TrendLine.Repositories.Interfaces;
 using TrendLine.Services.Interfaces;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace TrendLine.Services.Implementations
 {

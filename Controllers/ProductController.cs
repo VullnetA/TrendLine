@@ -21,7 +21,7 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetAllProducts()
         {
             var response = await _productService.GetAllProducts();
-            return Ok(response ?? new List<ProductDTO>()); // Return an empty list if no products are found
+            return Ok(response ?? new List<ProductDTO>());
         }
 
         [HttpGet("{id}")]
