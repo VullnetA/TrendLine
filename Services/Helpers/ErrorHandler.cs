@@ -2,7 +2,7 @@
 
 namespace TrendLine.Services.Helpers
 {
-    public static class ErrorResponseHelper
+    public static class ErrorHandler
     {
         /// <summary>
         /// Generates a standardized 404 Not Found response.

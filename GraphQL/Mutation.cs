@@ -1,6 +1,8 @@
-﻿using TrendLine.Data;
+﻿using Microsoft.AspNetCore.Authorization;
+using TrendLine.Data;
 using TrendLine.DTOs;
 using TrendLine.Models;
+using TrendLine.Services.Implementations;
 using TrendLine.Services.Interfaces;
 
 namespace TrendLine.GraphQL
@@ -9,35 +11,40 @@ namespace TrendLine.GraphQL
     {
         private readonly IProductService _productService;
         private readonly ICatalogService _catalogService;
-  
+        private readonly IDiscountService _discountService;
 
         public Mutation(IProductService productService,
-                        ICatalogService catalogService)
+                        ICatalogService catalogService,
+                        IDiscountService discountService)
         {
             _productService = productService;
             _catalogService = catalogService;
+            _discountService = discountService;
         }
 
+        [Authorize(Roles = "Admin, Advanced User")]
+        [GraphQLDescription("Adds a new product.")]
         public async Task<ProductDTO> AddProduct(AddProductDTO input)
         {
-            // Fetch related entities
             var brand = await _catalogService.GetBrandById(input.BrandId);
             var category = await _catalogService.GetCategoryById(input.CategoryId);
             var color = await _catalogService.GetColorById(input.ColorId);
             var size = await _catalogService.GetSizeById(input.SizeId);
 
-            // Add the product
             await _productService.AddProduct(input);
 
-            // Map to ProductDTO
+            double finalPrice = input.Price;
+            if (input.DiscountId.HasValue)
+            {
+                finalPrice = await CalculateDiscountedPriceAsync(input.Price, input.DiscountId.Value);
+            }
+
             return new ProductDTO
             {
                 Name = input.Name,
                 Description = input.Description,
                 Price = input.Price,
-                FinalPrice = input.DiscountId.HasValue
-                    ? CalculateDiscountedPrice(input.Price, input.DiscountId.Value)
-                    : input.Price,
+                FinalPrice = finalPrice,
                 Quantity = input.Quantity,
                 Gender = input.Gender.ToString(),
                 Brand = brand.Name,
@@ -47,12 +54,16 @@ namespace TrendLine.GraphQL
             };
         }
 
-        private double CalculateDiscountedPrice(double price, int discountId)
+        private async Task<double> CalculateDiscountedPriceAsync(double price, int discountId)
         {
-            // Assume this logic calculates the discounted price
-            // You can fetch the discount value using a DiscountService
-            // Example: 10% discount
-            double discountPercentage = 10; // Replace with actual logic
+            var discount = await _discountService.GetDiscountById(discountId);
+
+            if (discount == null || !discount.DiscountPercentage.HasValue)
+            {
+                throw new InvalidOperationException("Invalid or missing discount percentage.");
+            }
+
+            double discountPercentage = discount.DiscountPercentage.Value;
             return price - (price * discountPercentage / 100);
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TrendLine.DTOs;
 using TrendLine.Models;
+using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
@@ -42,6 +43,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<Discount>>> GetAllDiscounts()
         {
             var discounts = await _discountService.GetAllDiscounts();
+            if (discounts == null || !discounts.Any())
+                return ErrorHandler.NotFoundResponse(this, "No discounts found");
+
             return Ok(discounts);
         }
 
@@ -66,7 +70,7 @@ namespace TrendLine.Controllers
             }
             catch (KeyNotFoundException)
             {
-                return NotFound("Discount not found");
+                return ErrorHandler.NotFoundResponse(this, $"Discount with ID {id} not found");
             }
         }
 
@@ -77,13 +81,18 @@ namespace TrendLine.Controllers
         /// <returns>Status of the creation operation.</returns>
         /// <response code="200">Discount added successfully.</response>
         /// <response code="401">Unauthorized access.</response>
+        /// <response code="400">Invalid request or null input.</response>
         [HttpPost]
         [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(200)]
         [ProducesResponseType(401)]
+        [ProducesResponseType(400)]
         public async Task<ActionResult> AddDiscount(AddDiscountDTO discountDto)
         {
+            if (discountDto == null)
+                return ErrorHandler.BadRequestResponse(this, "Discount details cannot be null");
+
             await _discountService.AddDiscount(discountDto);
             return Ok("Discount added successfully");
         }
@@ -95,15 +104,27 @@ namespace TrendLine.Controllers
         /// <returns>Status of the update operation.</returns>
         /// <response code="200">Discount updated successfully.</response>
         /// <response code="401">Unauthorized access.</response>
+        /// <response code="400">Invalid request or null input.</response>
         [HttpPut]
         [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(200)]
         [ProducesResponseType(401)]
+        [ProducesResponseType(400)]
         public async Task<ActionResult> UpdateDiscount(UpdateDiscountDTO discountDto)
         {
-            await _discountService.UpdateDiscount(discountDto);
-            return Ok("Discount updated successfully");
+            if (discountDto == null)
+                return ErrorHandler.BadRequestResponse(this, "Discount details cannot be null");
+
+            try
+            {
+                await _discountService.UpdateDiscount(discountDto);
+                return Ok("Discount updated successfully");
+            }
+            catch (KeyNotFoundException)
+            {
+                return ErrorHandler.NotFoundResponse(this, $"Discount with ID {discountDto.Id} not found");
+            }
         }
 
         /// <summary>
@@ -114,14 +135,15 @@ namespace TrendLine.Controllers
         /// <response code="200">Discount removed successfully.</response>
         /// <response code="404">Discount not found.</response>
         [HttpDelete("{id}")]
-        [MapToApiVersion("2.0")]
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult> DeleteDiscount(int id)
         {
             var discount = await _discountService.GetDiscountById(id);
-            if (discount == null) return NotFound("Discount not found");
+            if (discount == null)
+                return ErrorHandler.NotFoundResponse(this, $"Discount with ID {id} not found");
 
             await _discountService.DeleteDiscount(id);
             return Ok("Discount removed successfully");

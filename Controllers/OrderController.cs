@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TrendLine.DTOs;
+using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
 
 namespace TrendLine.Controllers
@@ -10,9 +11,9 @@ namespace TrendLine.Controllers
     /// Manages order-related operations.
     /// </summary>
     [ApiController]
-    [ApiVersion("1.0")] // Version 1.0
-    [ApiVersion("2.0")] // Version 2.0 for future updates
-    [Route("api/v{version:apiVersion}/[controller]")] // Include version in the route
+    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -33,14 +34,16 @@ namespace TrendLine.Controllers
         /// <response code="200">Returns the list of orders.</response>
         /// <response code="401">Unauthorized access.</response>
         [HttpGet]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(typeof(IEnumerable<OrderDTO>), 200)]
         [ProducesResponseType(401)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetAllOrders()
         {
             var response = await _orderService.GetAllOrders();
-            if (response == null) return NotFound();
+            if (response == null || !response.Any())
+                return ErrorHandler.NotFoundResponse(this, "No orders found");
+
             return Ok(response);
         }
 
@@ -52,14 +55,16 @@ namespace TrendLine.Controllers
         /// <response code="200">Returns the requested order.</response>
         /// <response code="404">Order not found.</response>
         [HttpGet("{id}")]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User, Customer")]
         [ProducesResponseType(typeof(OrderDTO), 200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult<OrderDTO>> GetOrderById(int id)
         {
             var response = await _orderService.GetOrderById(id);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"Order with ID {id} not found");
+
             return Ok(response);
         }
 
@@ -70,29 +75,25 @@ namespace TrendLine.Controllers
         /// <returns>Status of the creation operation.</returns>
         /// <response code="200">Order created successfully.</response>
         /// <response code="401">Unauthorized access.</response>
+        /// <response code="400">Invalid request or null input.</response>
         [HttpPost]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Customer")]
         [ProducesResponseType(200)]
         [ProducesResponseType(401)]
+        [ProducesResponseType(400)]
         public async Task<ActionResult> CreateOrder(CreateOrderDTO orderDto)
         {
-            if (User.Identity.IsAuthenticated)
-            {
-                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (orderDto == null)
+                return ErrorHandler.BadRequestResponse(this, "Order details cannot be null");
 
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized("Customer ID claim not found in token");
-                }
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-                await _orderService.CreateOrder(orderDto, userId);
-                return Ok();
-            }
-            else
-            {
-                return Unauthorized("User not authenticated");
-            }
+            if (string.IsNullOrEmpty(userId))
+                return ErrorHandler.UnauthorizedResponse(this, "Customer ID claim not found in token");
+
+            await _orderService.CreateOrder(orderDto, userId);
+            return Ok("Order created successfully");
         }
 
         /// <summary>
@@ -102,14 +103,20 @@ namespace TrendLine.Controllers
         /// <param name="id">The ID of the order.</param>
         /// <returns>Status of the update operation.</returns>
         /// <response code="200">Order status updated successfully.</response>
+        /// <response code="404">Order not found with the specified ID.</response>
         [HttpPut("{id}/status")]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
         public async Task<ActionResult> UpdateOrderStatus(string status, int id)
         {
+            var existingOrder = await _orderService.GetOrderById(id);
+            if (existingOrder == null)
+                return ErrorHandler.NotFoundResponse(this, $"Order with ID {id} not found");
+
             await _orderService.UpdateOrderStatus(status, id);
-            return Ok();
+            return Ok("Order status updated successfully");
         }
 
         /// <summary>
@@ -120,14 +127,18 @@ namespace TrendLine.Controllers
         /// <response code="200">Order deleted successfully.</response>
         /// <response code="404">Order not found.</response>
         [HttpDelete("{id}")]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User, Customer")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult> DeleteOrder(int id)
         {
+            var existingOrder = await _orderService.GetOrderById(id);
+            if (existingOrder == null)
+                return ErrorHandler.NotFoundResponse(this, $"Order with ID {id} not found");
+
             await _orderService.DeleteOrder(id);
-            return Ok();
+            return Ok("Order deleted successfully");
         }
 
         /// <summary>
@@ -138,14 +149,16 @@ namespace TrendLine.Controllers
         /// <response code="200">Returns the filtered list of orders.</response>
         /// <response code="404">No orders found with the specified status.</response>
         [HttpGet("status/{status}")]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(typeof(IEnumerable<OrderDTO>), 200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByStatus(string status)
         {
             var response = await _orderService.GetOrdersByStatus(status);
-            if (response == null) return NotFound();
+            if (response == null || !response.Any())
+                return ErrorHandler.NotFoundResponse(this, $"No orders found with status '{status}'");
+
             return Ok(response);
         }
 
@@ -158,18 +171,19 @@ namespace TrendLine.Controllers
         /// <response code="200">Returns the filtered list of orders.</response>
         /// <response code="404">No orders found within the date range.</response>
         [HttpGet("dateRange")]
-        [MapToApiVersion("1.0")] // Available in version 1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(typeof(IEnumerable<OrderDTO>), 200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByDateRange(DateTime startDate, DateTime endDate)
         {
-            // Ensuring DateTime values are in UTC due to conversion issues
             startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
             endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
 
             var response = await _orderService.GetOrdersByDateRange(startDate, endDate);
-            if (response == null) return NotFound();
+            if (response == null || !response.Any())
+                return ErrorHandler.NotFoundResponse(this, "No orders found within the specified date range");
+
             return Ok(response);
         }
 
@@ -181,14 +195,16 @@ namespace TrendLine.Controllers
         /// <response code="200">Returns the list of order items.</response>
         /// <response code="404">Order not found.</response>
         [HttpGet("{orderId}/items")]
-        [MapToApiVersion("2.0")] // New in version 2.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User, Customer")]
         [ProducesResponseType(typeof(IEnumerable<OrderItemDTO>), 200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<OrderItemDTO>>> GetOrderItems(int orderId)
         {
             var response = await _orderService.GetOrderItemsByOrderId(orderId);
-            if (response == null) return NotFound();
+            if (response == null || !response.Any())
+                return ErrorHandler.NotFoundResponse(this, $"No items found for order with ID {orderId}");
+
             return Ok(response);
         }
     }
