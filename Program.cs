@@ -127,8 +127,8 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IDiscountService, DiscountService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<LinkHelper>();
-
-
+builder.Services.AddScoped<Query>();
+builder.Services.AddScoped<Mutation>();
 
 // GraphQL Setup
 builder.Services.AddGraphQLServer()

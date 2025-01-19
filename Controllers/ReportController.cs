@@ -1,10 +1,9 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using TrendLine.Data;
 using TrendLine.Enums;
 using TrendLine.Models;
+using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
 
 namespace TrendLine.Controllers
@@ -32,61 +31,94 @@ namespace TrendLine.Controllers
         /// <summary>
         /// Generates a daily sales report.
         /// </summary>
-        /// <remarks>
-        /// Available in version 1.0.
-        /// </remarks>
         /// <returns>The daily sales report.</returns>
         /// <response code="200">Returns the daily sales report.</response>
         /// <response code="401">Unauthorized access.</response>
+        /// <response code="404">Report not found.</response>
         [HttpGet("daily-sales")]
         [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(typeof(Report), 200)]
         [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
         public async Task<ActionResult<Report>> GenerateDailySalesReport()
         {
-            var report = await _reportService.GenerateReport(ReportType.DailySales);
-            return Ok(report);
+            try
+            {
+                var report = await _reportService.GenerateReport(ReportType.DailySales);
+                if (report == null)
+                {
+                    return ErrorHandler.NotFoundResponse(this, "Daily sales report not found.");
+                }
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return ErrorHandler.InternalServerErrorResponse(this, "Error generating daily sales report.", ex);
+            }
         }
 
         /// <summary>
         /// Generates a monthly sales report.
         /// </summary>
-        /// <remarks>
-        /// Available in version 1.0.
-        /// </remarks>
         /// <returns>The monthly sales report.</returns>
         /// <response code="200">Returns the monthly sales report.</response>
         /// <response code="401">Unauthorized access.</response>
+        /// <response code="404">Report not found.</response>
         [HttpGet("monthly-sales")]
         [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(typeof(Report), 200)]
         [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
         public async Task<ActionResult<Report>> GenerateMonthlySalesReport()
         {
-            var report = await _reportService.GenerateReport(ReportType.MonthlySales);
-            return Ok(report);
+            try
+            {
+                var report = await _reportService.GenerateReport(ReportType.MonthlySales);
+                if (report == null)
+                {
+                    return ErrorHandler.NotFoundResponse(this, "Monthly sales report not found.");
+                }
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return ErrorHandler.InternalServerErrorResponse(this, "Error generating monthly sales report.", ex);
+            }
         }
 
         /// <summary>
         /// Generates a report of the top products.
         /// </summary>
-        /// <remarks>
-        /// Available in version 1.0.
-        /// </remarks>
         /// <returns>The report of top products.</returns>
         /// <response code="200">Returns the top products report.</response>
         /// <response code="401">Unauthorized access.</response>
+        /// <response code="404">Report not found.</response>
         [HttpGet("top-products")]
         [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(typeof(Report), 200)]
         [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
         public async Task<ActionResult<Report>> GenerateTopProductsReport()
         {
-            var report = await _reportService.GenerateReport(ReportType.TopProducts);
-            return Ok(report);
+            try
+            {
+                var report = await _reportService.GenerateReport(ReportType.TopProducts);
+                if (report == null)
+                {
+                    return ErrorHandler.NotFoundResponse(this, "Top products report not found.");
+                }
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return ErrorHandler.InternalServerErrorResponse(this, "Error generating top products report.", ex);
+            }
         }
     }
 }

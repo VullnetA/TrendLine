@@ -13,15 +13,16 @@ namespace TrendLine.Controllers
     /// Handles authentication-related operations such as registration, login, and role management.
     /// </summary>
     [ApiController]
-    [ApiVersion("1.0")] // Define version 1.0
-    [ApiVersion("2.0")] // Define version 2.0 for future updates
-    [Route("api/v{version:apiVersion}/[controller]")] // Include API version in the route
+    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly AppDbContext _context;
         private readonly TokenService _tokenService;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthController"/> class.
         /// </summary>
@@ -57,7 +58,7 @@ namespace TrendLine.Controllers
 
             if (userExists != null)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "User already exists");
+                return ErrorHandler.BadRequestResponse(this, "User already exists");
             }
 
             var user = new ApplicationUser
@@ -74,7 +75,7 @@ namespace TrendLine.Controllers
 
             if (!result.Succeeded)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "User creation failed", result.Errors);
+                return ErrorHandler.BadRequestResponse(this, "User creation failed", result.Errors);
             }
 
             return Ok("User created successfully");
@@ -97,25 +98,25 @@ namespace TrendLine.Controllers
         {
             if (request == null)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "Request body is empty");
+                return ErrorHandler.BadRequestResponse(this, "Request body is empty");
             }
 
             var managedUser = await _userManager.FindByEmailAsync(request.Email);
             if (managedUser == null)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "No user found");
+                return ErrorHandler.BadRequestResponse(this, "No user found");
             }
 
             var isPasswordValid = await _userManager.CheckPasswordAsync(managedUser, request.Password);
             if (!isPasswordValid)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "Bad credentials");
+                return ErrorHandler.BadRequestResponse(this, "Bad credentials");
             }
 
             var userInDb = _context.Users.FirstOrDefault(u => u.Email == request.Email);
             if (userInDb is null)
             {
-                return ErrorResponseHelper.UnauthorizedResponse(this, "Authentication failed");
+                return ErrorHandler.UnauthorizedResponse(this, "Authentication failed");
             }
 
             var roles = await _userManager.GetRolesAsync(managedUser);
@@ -159,7 +160,7 @@ namespace TrendLine.Controllers
         /// <response code="200">Role assigned successfully.</response>
         /// <response code="400">Invalid username or role name.</response>
         [HttpPost("assign")]
-        [MapToApiVersion("2.0")]
+        [MapToApiVersion("1.0")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         public async Task<ActionResult> AssignRoleToUser(string username, string roleName)
@@ -183,7 +184,7 @@ namespace TrendLine.Controllers
             }
             catch (ApplicationException ex)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, ex.Message);
+                return ErrorHandler.BadRequestResponse(this, ex.Message);
             }
         }
 
@@ -195,7 +196,7 @@ namespace TrendLine.Controllers
         /// <response code="200">Customer registered successfully.</response>
         /// <response code="400">Customer already exists or invalid request.</response>
         [HttpPost("registerCustomer")]
-        [MapToApiVersion("2.0")]
+        [MapToApiVersion("1.0")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         public async Task<ActionResult> RegisterCustomer(CustomerRegistrationDTO registrationDto)
@@ -203,7 +204,7 @@ namespace TrendLine.Controllers
             var userExists = await _userManager.FindByEmailAsync(registrationDto.Email);
             if (userExists != null)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "User already exists");
+                return ErrorHandler.BadRequestResponse(this, "User already exists");
             }
 
             if (!await _roleManager.RoleExistsAsync("Customer"))
@@ -211,7 +212,7 @@ namespace TrendLine.Controllers
                 var roleResult = await _roleManager.CreateAsync(new IdentityRole("Customer"));
                 if (!roleResult.Succeeded)
                 {
-                    return ErrorResponseHelper.InternalServerErrorResponse(this, "Error creating Customer role", new Exception("Role creation failed"));
+                    return ErrorHandler.InternalServerErrorResponse(this, "Error creating Customer role", new Exception("Role creation failed"));
                 }
             }
 
@@ -228,7 +229,7 @@ namespace TrendLine.Controllers
             var result = await _userManager.CreateAsync(user, registrationDto.Password);
             if (!result.Succeeded)
             {
-                return ErrorResponseHelper.BadRequestResponse(this, "User creation failed", result.Errors);
+                return ErrorHandler.BadRequestResponse(this, "User creation failed", result.Errors);
             }
 
             await _userManager.AddToRoleAsync(user, "Customer");

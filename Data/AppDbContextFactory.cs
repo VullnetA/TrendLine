@@ -7,13 +7,11 @@ namespace TrendLine.Data
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            // Build configuration
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json")
                 .Build();
 
-            // Set up DbContext options using the connection string from appsettings.json
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
             optionsBuilder.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
 

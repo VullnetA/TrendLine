@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TrendLine.DTOs;
+using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
 
 namespace TrendLine.Controllers
@@ -11,9 +12,9 @@ namespace TrendLine.Controllers
     /// Manages customer-related operations.
     /// </summary>
     [ApiController]
-    [ApiVersion("1.0")] // Version 1.0
-    [ApiVersion("2.0")] // Version 2.0 for potential future updates
-    [Route("api/v{version:apiVersion}/[controller]")] // Versioning in the route
+    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _customerService;
@@ -35,7 +36,7 @@ namespace TrendLine.Controllers
         /// <response code="404">No customers found.</response>
         /// <response code="401">Unauthorized access.</response>
         [HttpGet]
-        [MapToApiVersion("1.0")] // Available in v1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(IEnumerable<CustomerDTO>), 200)]
         [ProducesResponseType(404)]
@@ -43,7 +44,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<CustomerDTO>>> GetAllCustomers()
         {
             var response = await _customerService.GetAllCustomers();
-            if (response == null) return NotFound();
+            if (response == null || !response.Any())
+                return ErrorHandler.NotFoundResponse(this, "No customers found");
+
             return Ok(response);
         }
 
@@ -57,7 +60,7 @@ namespace TrendLine.Controllers
         /// <response code="404">Customer not found.</response>
         /// <response code="401">Unauthorized access.</response>
         [HttpGet("{id}")]
-        [MapToApiVersion("1.0")] // Available in v1.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin,Customer")]
         [ProducesResponseType(typeof(CustomerDTO), 200)]
         [ProducesResponseType(403)]
@@ -67,14 +70,14 @@ namespace TrendLine.Controllers
         {
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // Admins can access any customer, but customers can only access their own data
             if (User.IsInRole("Customer") && currentUserId != id)
             {
-                return Forbid();
+                return ErrorHandler.ForbiddenResponse(this, "Access to this resource is forbidden");
             }
 
             var customer = await _customerService.GetCustomerById(id);
-            if (customer == null) return NotFound("Customer not found");
+            if (customer == null)
+                return ErrorHandler.NotFoundResponse(this, "Customer not found");
 
             return Ok(customer);
         }
@@ -88,7 +91,7 @@ namespace TrendLine.Controllers
         /// <response code="404">Customer not found.</response>
         /// <response code="401">Unauthorized access.</response>
         [HttpDelete("{id}")]
-        [MapToApiVersion("2.0")] // Introduced in v2.0
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
@@ -96,7 +99,8 @@ namespace TrendLine.Controllers
         public async Task<ActionResult> DeleteCustomer(string id)
         {
             var customerExists = await _customerService.GetCustomerById(id);
-            if (customerExists == null) return NotFound("Customer not found");
+            if (customerExists == null)
+                return ErrorHandler.NotFoundResponse(this, "Customer not found");
 
             await _customerService.DeleteCustomer(id);
             return Ok("Customer deleted successfully");

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TrendLine.DTOs;
+using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
 
 namespace TrendLine.Controllers
@@ -22,6 +23,7 @@ namespace TrendLine.Controllers
         /// Initializes a new instance of the <see cref="ProductController"/> class.
         /// </summary>
         /// <param name="productService">Service for product management.</param>
+        /// <param name="linkHelper">Utility for generating HATEOAS links to enhance API responses with navigable actions.</param>
         public ProductController(IProductService productService, LinkHelper linkHelper)
         {
             _productService = productService;
@@ -44,16 +46,11 @@ namespace TrendLine.Controllers
             var products = await _productService.GetAllProducts();
 
             if (products == null || !products.Any())
-                return NotFound();
-
-            //// Add HATEOAS links for each product
-            //foreach (var product in products)
-            //{
-            //    product.Links = _linkHelper.GenerateProductLinks(HttpContext, product.Id);
-            //}
+                return ErrorHandler.NotFoundResponse(this, "No products found");
 
             return Ok(products);
         }
+
         /// <summary>
         /// Retrieves a specific product by ID.
         /// </summary>
@@ -71,9 +68,8 @@ namespace TrendLine.Controllers
             var product = await _productService.GetProductById(id);
 
             if (product == null)
-                return NotFound();
+                return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
 
-            // Generate and add HATEOAS links
             product.Links = _linkHelper.GenerateProductLinks(HttpContext, id);
 
             return Ok(product);
@@ -105,14 +101,15 @@ namespace TrendLine.Controllers
         /// <response code="200">Product removed successfully.</response>
         /// <response code="404">Product not found.</response>
         [HttpDelete("{id}")]
-        [MapToApiVersion("2.0")]
+        [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult> DeleteProduct(int id)
         {
             var product = await _productService.GetProductById(id);
-            if (product == null) return NotFound("Product not found");
+            if (product == null)
+                return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
 
             await _productService.DeleteProduct(id);
             return Ok("Product removed successfully");
@@ -150,7 +147,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByCategory(string category)
         {
             var response = await _productService.FindByCategory(category);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"No products found in category '{category}'");
+
             return Ok(response);
         }
 
@@ -169,7 +168,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByBrand(string brand)
         {
             var response = await _productService.FindByBrand(brand);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"No products found for brand '{brand}'");
+
             return Ok(response);
         }
 
@@ -188,7 +189,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByGender(string gender)
         {
             var response = await _productService.FindByGender(gender);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"No products found for gender '{gender}'");
+
             return Ok(response);
         }
 
@@ -208,7 +211,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByPriceRange(double minPrice, double maxPrice)
         {
             var response = await _productService.FindByPriceRange(minPrice, maxPrice);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"No products found in the price range {minPrice} - {maxPrice}");
+
             return Ok(response);
         }
 
@@ -227,7 +232,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsBySize(string size)
         {
             var response = await _productService.FindBySize(size);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"No products found for size '{size}'");
+
             return Ok(response);
         }
 
@@ -246,7 +253,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByColor(string color)
         {
             var response = await _productService.FindByColor(color);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"No products found for color '{color}'");
+
             return Ok(response);
         }
 
@@ -327,7 +336,9 @@ namespace TrendLine.Controllers
         public async Task<ActionResult<ProductQuantityDTO>> GetQuantity(int id)
         {
             var response = await _productService.GetProductQuantity(id);
-            if (response == null) return NotFound();
+            if (response == null)
+                return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
+
             return Ok(response);
         }
 
@@ -348,7 +359,7 @@ namespace TrendLine.Controllers
         {
             if (updateQuantity.Quantity < 0)
             {
-                return BadRequest("Quantity cannot be negative.");
+                return ErrorHandler.BadRequestResponse(this, "Quantity cannot be negative.");
             }
 
             await _productService.UpdateQuantity(id, updateQuantity.Quantity);
@@ -361,16 +372,18 @@ namespace TrendLine.Controllers
         /// <param name="searchParams">The search parameters.</param>
         /// <returns>A list of matching products.</returns>
         /// <response code="200">Returns the list of matching products.</response>
+        /// <response code="404">No products matched the search parameters.</response>
         [HttpGet("search")]
         [MapToApiVersion("1.0")]
         [Authorize(Roles = "Admin, Advanced User, Simple User, Customer")]
         [ProducesResponseType(typeof(IEnumerable<ProductDTO>), 200)]
+        [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> SearchProducts([FromQuery] ProductSearchDTO searchParams)
         {
             var products = await _productService.SearchProducts(searchParams);
-            if (!products.Any())
+            if (products == null || !products.Any())
             {
-                return Ok(new List<ProductDTO>());
+                return ErrorHandler.NotFoundResponse(this, "No products matched the search parameters.");
             }
 
             return Ok(products);

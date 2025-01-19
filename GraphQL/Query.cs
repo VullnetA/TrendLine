@@ -1,7 +1,6 @@
-﻿using AutoMapper;
-using TrendLine.Repositories.Interfaces;
-using TrendLine.DTOs;
+﻿using TrendLine.DTOs;
 using TrendLine.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TrendLine.GraphQL
 {
@@ -15,6 +14,8 @@ namespace TrendLine.GraphQL
         }
 
         [GraphQLName("getProducts")]
+        [Authorize(Roles = "Admin, Advanced User, Simple User, Customer")]
+        [GraphQLDescription("Fetches a list of all available products.")]
         public async Task<IEnumerable<ProductDTO>> GetProducts()
         {
             return await _productService.GetAllProducts();
