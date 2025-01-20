@@ -2,9 +2,9 @@
 {
     public class Link
     {
-        public string Href { get; set; }  // The URL for the link
-        public string Rel { get; set; }   // The relation type (e.g., "self", "update", "delete")
-        public string Method { get; set; } // The HTTP method (e.g., GET, POST)
+        public string Href { get; set; }
+        public string Rel { get; set; }
+        public string Method { get; set; }
 
         public Link(string href, string rel, string method)
         {
@@ -13,5 +13,4 @@
             Method = method;
         }
     }
-
 }

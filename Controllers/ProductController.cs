@@ -33,7 +33,7 @@ namespace TrendLine.Controllers
         /// <summary>
         /// Retrieves all products.
         /// </summary>
-        /// <returns>A list of all products.</returns>
+        /// <returns>A list of all products with HATEOAS links.</returns>
         /// <response code="200">Returns the list of products.</response>
         /// <response code="401">Unauthorized access.</response>
         [HttpGet]
@@ -47,6 +47,20 @@ namespace TrendLine.Controllers
 
             if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, "No products found");
+
+            var userRoles = HttpContext.User.FindAll(System.Security.Claims.ClaimTypes.Role)
+                                .Select(role => role.Value)
+                                .ToList();
+
+            foreach (var product in products)
+            {
+                product.Links = _linkHelper.GenerateProductLinksForAllProducts(
+                    HttpContext,
+                    product.Id,
+                    product.Category,
+                    userRoles
+                );
+            }
 
             return Ok(products);
         }
@@ -70,7 +84,20 @@ namespace TrendLine.Controllers
             if (product == null)
                 return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
 
-            product.Links = _linkHelper.GenerateProductLinks(HttpContext, id);
+            var userRoles = HttpContext.User.FindAll(System.Security.Claims.ClaimTypes.Role)
+                                 .Select(role => role.Value)
+                                 .ToList();
+
+            product.Links = _linkHelper.GenerateProductLinksForSingleProduct(
+                HttpContext,
+                product.Id,
+                product.Category,
+                product.Brand,
+                product.Gender,
+                product.Size,
+                product.Color,
+                userRoles
+            );
 
             return Ok(product);
         }

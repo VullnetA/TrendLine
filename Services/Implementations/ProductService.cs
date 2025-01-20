@@ -33,9 +33,10 @@ namespace TrendLine.Services.Implementations
         public async Task<IEnumerable<ProductDTO>> GetAllProducts()
         {
             var products = await _productRepository.GetAllProducts();
+
             return products.Select(product =>
             {
-                var productDto = _mapper.Map<ProductDTO>(product);
+                var productDto = _mapper.Map<ProductDTO>(product, opts => opts.Items["IsSingleProduct"] = false);
                 productDto.FinalPrice = CalculateFinalPrice(product);
                 return productDto;
             });
@@ -46,7 +47,7 @@ namespace TrendLine.Services.Implementations
             var product = await _productRepository.GetProductById(id);
             if (product == null) return null;
 
-            var productDto = _mapper.Map<ProductDTO>(product);
+            var productDto = _mapper.Map<ProductDTO>(product, opts => opts.Items["IsSingleProduct"] = true);
             productDto.FinalPrice = CalculateFinalPrice(product);
 
             return productDto;
