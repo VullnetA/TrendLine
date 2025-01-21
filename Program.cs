@@ -10,6 +10,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
 using TrendLine.Data;
 using TrendLine.GraphQL;
+using TrendLine.LinksResolvers;
 using TrendLine.Models;
 using TrendLine.Repositories.Implementations;
 using TrendLine.Repositories.Interfaces;
@@ -25,15 +26,15 @@ builder.Services.AddControllers();
 // Configure API Versioning
 builder.Services.AddApiVersioning(options =>
 {
-    options.DefaultApiVersion = new ApiVersion(1, 0); // Default API version
-    options.AssumeDefaultVersionWhenUnspecified = true; // Assume default if not specified
-    options.ReportApiVersions = true; // Add versioning headers to the response
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
 })
-.AddMvc() // Enable versioning for MVC controllers
+.AddMvc()
 .AddApiExplorer(options =>
 {
-    options.GroupNameFormat = "'v'VVV"; // e.g., "v1", "v2"
-    options.SubstituteApiVersionInUrl = true; // Replace {version} in routes
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
 });
 
 // Configure Swagger for API versioning and JWT
@@ -129,6 +130,10 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<LinkHelper>();
 builder.Services.AddScoped<Query>();
 builder.Services.AddScoped<Mutation>();
+builder.Services.AddScoped<LinkHelper>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ProductLinksResolver>();
+builder.Services.AddScoped<OrderLinksResolver>();
 
 // GraphQL Setup
 builder.Services.AddGraphQLServer()
@@ -186,7 +191,6 @@ if (app.Environment.IsDevelopment())
         }
     });
 }
-
 
 app.UseCors();
 app.UseHttpsRedirection();

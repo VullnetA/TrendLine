@@ -128,7 +128,7 @@ namespace TrendLine.Controllers
         /// <response code="404">Order not found.</response>
         [HttpDelete("{id}")]
         [MapToApiVersion("1.0")]
-        [Authorize(Roles = "Admin, Advanced User, Customer")]
+        [Authorize(Roles = "Admin, Advanced User")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         public async Task<ActionResult> DeleteOrder(int id)

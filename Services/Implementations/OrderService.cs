@@ -1,4 +1,5 @@
-﻿using TrendLine.DTOs;
+﻿using AutoMapper;
+using TrendLine.DTOs;
 using TrendLine.Models;
 using TrendLine.Repositories.Interfaces;
 using TrendLine.Services.Interfaces;
@@ -9,46 +10,24 @@ namespace TrendLine.Services.Implementations
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
+        private readonly IMapper _mapper;
 
-        public OrderService(IOrderRepository orderRepository)
+        public OrderService(IOrderRepository orderRepository, IMapper mapper)
         {
             _orderRepository = orderRepository;
+            _mapper = mapper;
         }
 
         public async Task<IEnumerable<OrderDTO>> GetAllOrders()
         {
             var orders = await _orderRepository.GetAllOrders();
-            return orders.Select(order => new OrderDTO
-            {
-                Id = order.Id,
-                CustomerId = order.CustomerId,
-                OrderDate = order.OrderDate,
-                Status = order.Status,
-                OrderItems = order.OrderItems?.Select(item => new OrderItemDTO
-                {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    Price = item.Price
-                }).ToList()
-            });
+            return _mapper.Map<IEnumerable<OrderDTO>>(orders); // Use AutoMapper for mapping
         }
 
         public async Task<OrderDTO> GetOrderById(int id)
         {
             var order = await _orderRepository.GetOrderById(id);
-            return order != null ? new OrderDTO
-            {
-                Id = order.Id,
-                CustomerId = order.CustomerId,
-                OrderDate = order.OrderDate,
-                Status = order.Status,
-                OrderItems = order.OrderItems?.Select(item => new OrderItemDTO
-                {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    Price = item.Price
-                }).ToList()
-            } : null;
+            return order != null ? _mapper.Map<OrderDTO>(order) : null; // Use AutoMapper for mapping
         }
 
         public async Task CreateOrder(CreateOrderDTO orderDto, string userId)
