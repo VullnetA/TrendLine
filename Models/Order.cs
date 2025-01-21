@@ -8,7 +8,7 @@ namespace TrendLine.Models
         [Key]
         public int Id { get; set; }
         public string CustomerId { get; set; }
-        public ApplicationUser Customer { get; set; }
+        public Customer Customer { get; set; }
         public DateTime OrderDate { get; set; }
         public string Status { get; set; }
         public ICollection<OrderItem> OrderItems { get; set; }

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using TrendLine.DTOs;
 using TrendLine.Models;
 using TrendLine.Repositories.Interfaces;
@@ -10,31 +11,39 @@ namespace TrendLine.Services.Implementations
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
+        private readonly ICustomerRepository _customerRepository;
         private readonly IMapper _mapper;
 
-        public OrderService(IOrderRepository orderRepository, IMapper mapper)
+        public OrderService(IOrderRepository orderRepository, IMapper mapper, ICustomerRepository customerRepository)
         {
             _orderRepository = orderRepository;
             _mapper = mapper;
+            _customerRepository = customerRepository;
         }
 
         public async Task<IEnumerable<OrderDTO>> GetAllOrders()
         {
             var orders = await _orderRepository.GetAllOrders();
-            return _mapper.Map<IEnumerable<OrderDTO>>(orders); // Use AutoMapper for mapping
+            return _mapper.Map<IEnumerable<OrderDTO>>(orders);
         }
 
         public async Task<OrderDTO> GetOrderById(int id)
         {
             var order = await _orderRepository.GetOrderById(id);
-            return order != null ? _mapper.Map<OrderDTO>(order) : null; // Use AutoMapper for mapping
+            return order != null ? _mapper.Map<OrderDTO>(order) : null;
         }
 
         public async Task CreateOrder(CreateOrderDTO orderDto, string userId)
         {
+            var customer = await _customerRepository.GetCustomerById(userId);
+            if (customer == null)
+            {
+                throw new InvalidOperationException("Customer not found for the given user.");
+            }
+
             var order = new Order
             {
-                CustomerId = userId,
+                CustomerId = customer.Id,
                 OrderDate = DateTime.UtcNow,
                 Status = "Pending",
                 OrderItems = orderDto.OrderItems.Select(itemDto => new OrderItem

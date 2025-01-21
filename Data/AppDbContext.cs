@@ -33,12 +33,11 @@ namespace TrendLine.Data
             .HasConversion<string>();
 
             modelBuilder.Entity<Customer>()
-                   .HasOne(c => c.User)
-                   .WithOne()
-                   .HasForeignKey<Customer>(c => c.UserId);
+            .HasMany(c => c.Orders)
+            .WithOne(o => o.Customer) 
+            .HasForeignKey(o => o.CustomerId);
 
             base.OnModelCreating(modelBuilder);
-
         }
     }
 }

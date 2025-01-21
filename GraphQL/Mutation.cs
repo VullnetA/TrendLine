@@ -1,8 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using TrendLine.Data;
 using TrendLine.DTOs;
-using TrendLine.Models;
-using TrendLine.Services.Implementations;
 using TrendLine.Services.Interfaces;
 
 namespace TrendLine.GraphQL
@@ -26,32 +23,62 @@ namespace TrendLine.GraphQL
         [GraphQLDescription("Adds a new product.")]
         public async Task<ProductDTO> AddProduct(AddProductDTO input)
         {
-            var brand = await _catalogService.GetBrandById(input.BrandId);
-            var category = await _catalogService.GetCategoryById(input.CategoryId);
-            var color = await _catalogService.GetColorById(input.ColorId);
-            var size = await _catalogService.GetSizeById(input.SizeId);
-
-            await _productService.AddProduct(input);
-
-            double finalPrice = input.Price;
-            if (input.DiscountId.HasValue)
+            try
             {
-                finalPrice = await CalculateDiscountedPriceAsync(input.Price, input.DiscountId.Value);
+                var brand = await _catalogService.GetBrandById(input.BrandId);
+                if (brand == null)
+                {
+                    throw CreateGraphQLError("Brand not found", "NOT_FOUND", $"Brand ID {input.BrandId} does not exist.");
+                }
+
+                var category = await _catalogService.GetCategoryById(input.CategoryId);
+                if (category == null)
+                {
+                    throw CreateGraphQLError("Category not found", "NOT_FOUND", $"Category ID {input.CategoryId} does not exist.");
+                }
+
+                var color = await _catalogService.GetColorById(input.ColorId);
+                if (color == null)
+                {
+                    throw CreateGraphQLError("Color not found", "NOT_FOUND", $"Color ID {input.ColorId} does not exist.");
+                }
+
+                var size = await _catalogService.GetSizeById(input.SizeId);
+                if (size == null)
+                {
+                    throw CreateGraphQLError("Size not found", "NOT_FOUND", $"Size ID {input.SizeId} does not exist.");
+                }
+
+                await _productService.AddProduct(input);
+
+                double finalPrice = input.Price;
+                if (input.DiscountId.HasValue)
+                {
+                    finalPrice = await CalculateDiscountedPriceAsync(input.Price, input.DiscountId.Value);
+                }
+
+                return new ProductDTO
+                {
+                    Name = input.Name,
+                    Description = input.Description,
+                    Price = input.Price,
+                    FinalPrice = finalPrice,
+                    Quantity = input.Quantity,
+                    Gender = input.Gender.ToString(),
+                    Brand = brand.Name,
+                    Category = category.Name,
+                    Color = color.Name,
+                    Size = size.Label,
+                };
             }
-
-            return new ProductDTO
+            catch (GraphQLException ex)
             {
-                Name = input.Name,
-                Description = input.Description,
-                Price = input.Price,
-                FinalPrice = finalPrice,
-                Quantity = input.Quantity,
-                Gender = input.Gender.ToString(),
-                Brand = brand.Name,
-                Category = category.Name,
-                Color = color.Name,
-                Size = size.Label,
-            };
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw CreateGraphQLError("An unexpected error occurred", "INTERNAL_SERVER_ERROR", ex.Message);
+            }
         }
 
         private async Task<double> CalculateDiscountedPriceAsync(double price, int discountId)
@@ -60,11 +87,23 @@ namespace TrendLine.GraphQL
 
             if (discount == null || !discount.DiscountPercentage.HasValue)
             {
-                throw new InvalidOperationException("Invalid or missing discount percentage.");
+                throw CreateGraphQLError("Invalid discount", "INVALID_INPUT", $"Discount ID {discountId} is invalid or missing.");
             }
 
             double discountPercentage = discount.DiscountPercentage.Value;
             return price - (price * discountPercentage / 100);
+        }
+
+        private GraphQLException CreateGraphQLError(string message, string code, string details)
+        {
+            var error = ErrorBuilder.New()
+                .SetMessage(message)
+                .SetCode(code)
+                .SetExtension("details", details)
+                .SetExtension("timestamp", DateTime.UtcNow.ToString("o"))
+                .Build();
+
+            return new GraphQLException(error);
         }
     }
 }
