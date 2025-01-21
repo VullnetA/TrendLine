@@ -3,10 +3,8 @@ using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
 using TrendLine.Data;
 using TrendLine.GraphQL;
@@ -17,6 +15,7 @@ using TrendLine.Repositories.Interfaces;
 using TrendLine.Services.AuthenticationService;
 using TrendLine.Services.Implementations;
 using TrendLine.Services.Interfaces;
+using TrendLine.Services.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -137,6 +136,7 @@ builder.Services.AddScoped<OrderLinksResolver>();
 
 // GraphQL Setup
 builder.Services.AddGraphQLServer()
+    .AddErrorFilter<GraphQLErrorFilter>()
     .AddQueryType<Query>()
     .AddMutationType<Mutation>()
     .AddSubscriptionType<Subscription>()

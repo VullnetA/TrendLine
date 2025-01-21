@@ -18,8 +18,11 @@ namespace TrendLine.Repositories.Implementations
         {
             return await _context.Customers
                 .Include(c => c.User)
+                .Include(c => c.Orders)
+                    .ThenInclude(o => o.OrderItems)
                 .ToListAsync();
         }
+
 
         public async Task<Customer> GetCustomerById(string customerId)
         {
