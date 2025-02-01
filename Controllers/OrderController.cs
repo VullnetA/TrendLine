@@ -85,6 +85,35 @@ namespace TrendLine.Controllers
         }
 
         /// <summary>
+        /// Retrieves all orders for a specific customer.
+        /// </summary>
+        /// <param name="customerId">The ID of the customer.</param>
+        /// <returns>A list of orders for the given customer.</returns>
+        /// <response code="200">Returns the list of customer orders.</response>
+        /// <response code="401">Unauthorized access.</response>
+        /// <response code="404">No orders found for the customer.</response>
+        [HttpGet("customer/{customerId}")]
+        [MapToApiVersion("1.0")]
+        [Authorize(Roles = "Admin, Advanced User, Customer")]
+        [ProducesResponseType(typeof(IEnumerable<OrderDTO>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
+        public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByCustomerId(string customerId)
+        {
+            if (_memoryCache.TryGetValue($"CustomerOrders_{customerId}", out IEnumerable<OrderDTO> orders))
+            {
+                return Ok(orders);
+            }
+
+            orders = await _orderService.GetOrdersByCustomerId(customerId);
+            if (orders == null || !orders.Any())
+                return ErrorHandler.NotFoundResponse(this, $"No orders found for Customer ID {customerId}");
+
+            _memoryCache.Set($"CustomerOrders_{customerId}", orders, TimeSpan.FromMinutes(10));
+            return Ok(orders);
+        }
+
+        /// <summary>
         /// Creates a new order.
         /// </summary>
         /// <param name="orderDto">Details of the order to create.</param>

@@ -23,10 +23,12 @@ namespace TrendLine.Repositories.Implementations
                 .ToListAsync();
         }
 
-
         public async Task<Customer> GetCustomerById(string customerId)
         {
-            return await _context.Customers.FirstOrDefaultAsync(c => c.UserId == customerId);
+            return await _context.Customers
+                .Include(c => c.User)
+                .Include(c => c.Orders)
+                .FirstOrDefaultAsync(c => c.Id == customerId);
         }
 
         public async Task AddCustomer(Customer customer)

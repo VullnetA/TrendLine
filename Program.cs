@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using TrendLine.Data;
 using TrendLine.GraphQL;
+using TrendLine.GraphQL.Types;
 using TrendLine.LinksResolvers;
 using TrendLine.Mapping;
 using TrendLine.Models;
@@ -139,7 +140,10 @@ builder.Services.AddScoped<OrderLinksResolver>();
 builder.Services.AddGraphQLServer()
     .AddErrorFilter<GraphQLErrorFilter>()
     .AddQueryType<Query>()
+    .AddType<OrderType>()
+    .AddType<CustomerType>()
     .AddMutationType<Mutation>()
+    .AddType<ProductType>()
     .AddSubscriptionType<Subscription>()
     .AddProjections()
     .AddFiltering()

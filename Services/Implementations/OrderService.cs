@@ -33,6 +33,12 @@ namespace TrendLine.Services.Implementations
             return order != null ? _mapper.Map<OrderDTO>(order) : null;
         }
 
+        public async Task<IEnumerable<OrderDTO>> GetOrdersByCustomerId(string customerId)
+        {
+            var orders = await _orderRepository.GetOrdersByCustomerId(customerId);
+            return _mapper.Map<IEnumerable<OrderDTO>>(orders);
+        }
+
         public async Task CreateOrder(CreateOrderDTO orderDto, string userId)
         {
             var customer = await _customerRepository.GetCustomerById(userId);
