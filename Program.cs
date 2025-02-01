@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using System.Text;
 using TrendLine.Data;
 using TrendLine.GraphQL;
 using TrendLine.LinksResolvers;
+using TrendLine.Mapping;
 using TrendLine.Models;
 using TrendLine.Repositories.Implementations;
 using TrendLine.Repositories.Interfaces;
@@ -129,7 +131,6 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<LinkHelper>();
 builder.Services.AddScoped<Query>();
 builder.Services.AddScoped<Mutation>();
-builder.Services.AddScoped<LinkHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ProductLinksResolver>();
 builder.Services.AddScoped<OrderLinksResolver>();
@@ -146,8 +147,22 @@ builder.Services.AddGraphQLServer()
     .ModifyRequestOptions(options => options.IncludeExceptionDetails = true)
     .AddInMemorySubscriptions();
 
-builder.Services.AddAutoMapper(typeof(Program));
-// CORS Setup
+// Rate Limiting Configuration
+builder.Services.AddOptions();
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
+builder.Services.AddMemoryCache();
+
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+});
+
+builder.Services.AddSingleton(provider => provider.GetRequiredService<IConfigurationProvider>());
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>
@@ -161,6 +176,35 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Add this block for database migration
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        await context.Database.MigrateAsync();
+
+        // After migration is complete, then create roles
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        string[] roles = new[] { "Admin", "Advanced User", "Simple User", "Customer" };
+
+        foreach (var roleName in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(roleName))
+            {
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the database or seeding roles.");
+        throw;
+    }
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
@@ -172,6 +216,23 @@ using (var scope = app.Services.CreateScope())
         {
             await roleManager.CreateAsync(new IdentityRole(roleName));
         }
+    }
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<AppDbContext>();
+
+    try
+    {
+        await SeedData.SeedAsync(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+        throw;
     }
 }
 
@@ -196,8 +257,12 @@ app.UseCors();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseIpRateLimiting();
 app.UseWebSockets();
 app.MapGraphQL();
 app.MapControllers();
+app.MapGet("/health", () => Results.Ok("Healthy"))
+   .WithName("HealthCheck")
+   .WithOpenApi();
 
 app.Run();

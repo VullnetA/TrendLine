@@ -1,29 +1,52 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
+# Base image for runtime
 FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
+# Set environment variables
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ConnectionStrings__DefaultConnection="Host=database;Port=5432;Database=TrendLineDB;Username=postgres;Password=YourStrong!Passw0rd"
 
-# This stage is used to build the service project
+# Image for building
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Copy and restore dependencies
 COPY ["TrendLine.csproj", "."]
 RUN dotnet restore "./TrendLine.csproj"
+
+# Install Entity Framework Core tools
+RUN dotnet tool install --global dotnet-ef --version 7.0.15
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
 COPY . .
-WORKDIR "/src/."
-RUN dotnet build "./TrendLine.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/"
+RUN dotnet build "./TrendLine.csproj" -c Release -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+# Publish
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./TrendLine.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./TrendLine.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
+# Final image
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "TrendLine.dll"]
+
+# Install PostgreSQL client
+RUN apt-get update \
+    && apt-get install -y postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+until pg_isready -h database -p 5432 -U postgres; do\n\
+  >&2 echo "Postgres is unavailable - sleeping"\n\
+  sleep 1\n\
+done\n\
+\n\
+>&2 echo "Postgres is up - executing command"\n\
+dotnet TrendLine.dll' > /app/startup.sh && \
+chmod +x /app/startup.sh
+
+ENTRYPOINT ["/app/startup.sh"]

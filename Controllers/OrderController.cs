@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using TrendLine.DTOs;
 using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
@@ -17,14 +18,17 @@ namespace TrendLine.Controllers
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly IMemoryCache _memoryCache;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OrderController"/> class.
         /// </summary>
         /// <param name="orderService">Service for order management.</param>
-        public OrderController(IOrderService orderService)
+        /// <param name="memoryCache">Cache for storing API responses.</param>
+        public OrderController(IOrderService orderService, IMemoryCache memoryCache)
         {
             _orderService = orderService;
+            _memoryCache = memoryCache;
         }
 
         /// <summary>
@@ -40,11 +44,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(401)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetAllOrders()
         {
-            var response = await _orderService.GetAllOrders();
-            if (response == null || !response.Any())
+            if (_memoryCache.TryGetValue("AllOrders", out IEnumerable<OrderDTO> orders))
+            {
+                return Ok(orders);
+            }
+
+            orders = await _orderService.GetAllOrders();
+            if (orders == null || !orders.Any())
                 return ErrorHandler.NotFoundResponse(this, "No orders found");
 
-            return Ok(response);
+            _memoryCache.Set("AllOrders", orders, TimeSpan.FromMinutes(10));
+            return Ok(orders);
         }
 
         /// <summary>
@@ -61,11 +71,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<OrderDTO>> GetOrderById(int id)
         {
-            var response = await _orderService.GetOrderById(id);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"Order_{id}", out OrderDTO order))
+            {
+                return Ok(order);
+            }
+
+            order = await _orderService.GetOrderById(id);
+            if (order == null)
                 return ErrorHandler.NotFoundResponse(this, $"Order with ID {id} not found");
 
-            return Ok(response);
+            _memoryCache.Set($"Order_{id}", order, TimeSpan.FromMinutes(10));
+            return Ok(order);
         }
 
         /// <summary>
@@ -93,6 +109,10 @@ namespace TrendLine.Controllers
                 return ErrorHandler.UnauthorizedResponse(this, "Customer ID claim not found in token");
 
             await _orderService.CreateOrder(orderDto, userId);
+
+            // Invalidate related cache
+            _memoryCache.Remove("AllOrders");
+
             return Ok("Order created successfully");
         }
 
@@ -116,6 +136,11 @@ namespace TrendLine.Controllers
                 return ErrorHandler.NotFoundResponse(this, $"Order with ID {id} not found");
 
             await _orderService.UpdateOrderStatus(status, id);
+
+            // Invalidate cache for the specific order
+            _memoryCache.Remove($"Order_{id}");
+            _memoryCache.Remove("AllOrders");
+
             return Ok("Order status updated successfully");
         }
 
@@ -138,6 +163,11 @@ namespace TrendLine.Controllers
                 return ErrorHandler.NotFoundResponse(this, $"Order with ID {id} not found");
 
             await _orderService.DeleteOrder(id);
+
+            // Invalidate related cache
+            _memoryCache.Remove($"Order_{id}");
+            _memoryCache.Remove("AllOrders");
+
             return Ok("Order deleted successfully");
         }
 
@@ -155,11 +185,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByStatus(string status)
         {
-            var response = await _orderService.GetOrdersByStatus(status);
-            if (response == null || !response.Any())
+            if (_memoryCache.TryGetValue($"OrdersByStatus_{status}", out IEnumerable<OrderDTO> orders))
+            {
+                return Ok(orders);
+            }
+
+            orders = await _orderService.GetOrdersByStatus(status);
+            if (orders == null || !orders.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No orders found with status '{status}'");
 
-            return Ok(response);
+            _memoryCache.Set($"OrdersByStatus_{status}", orders, TimeSpan.FromMinutes(10));
+            return Ok(orders);
         }
 
         /// <summary>
@@ -177,14 +213,20 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByDateRange(DateTime startDate, DateTime endDate)
         {
+            if (_memoryCache.TryGetValue($"OrdersByDateRange_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}", out IEnumerable<OrderDTO> orders))
+            {
+                return Ok(orders);
+            }
+
             startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
             endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
 
-            var response = await _orderService.GetOrdersByDateRange(startDate, endDate);
-            if (response == null || !response.Any())
+            orders = await _orderService.GetOrdersByDateRange(startDate, endDate);
+            if (orders == null || !orders.Any())
                 return ErrorHandler.NotFoundResponse(this, "No orders found within the specified date range");
 
-            return Ok(response);
+            _memoryCache.Set($"OrdersByDateRange_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}", orders, TimeSpan.FromMinutes(10));
+            return Ok(orders);
         }
 
         /// <summary>
@@ -201,11 +243,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<OrderItemDTO>>> GetOrderItems(int orderId)
         {
-            var response = await _orderService.GetOrderItemsByOrderId(orderId);
-            if (response == null || !response.Any())
+            if (_memoryCache.TryGetValue($"OrderItems_{orderId}", out IEnumerable<OrderItemDTO> items))
+            {
+                return Ok(items);
+            }
+
+            items = await _orderService.GetOrderItemsByOrderId(orderId);
+            if (items == null || !items.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No items found for order with ID {orderId}");
 
-            return Ok(response);
+            _memoryCache.Set($"OrderItems_{orderId}", items, TimeSpan.FromMinutes(10));
+            return Ok(items);
         }
     }
 }

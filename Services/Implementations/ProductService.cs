@@ -37,7 +37,16 @@ namespace TrendLine.Services.Implementations
             return products.Select(product =>
             {
                 var productDto = _mapper.Map<ProductDTO>(product, opts => opts.Items["IsSingleProduct"] = false);
-                productDto.FinalPrice = CalculateFinalPrice(product);
+
+                if (product.Discount != null && product.Discount.ExpirationDate.HasValue)
+                {
+                    productDto.FinalPrice = CalculateFinalPrice(product);
+                }
+                else
+                {
+                    productDto.FinalPrice = product.Price;
+                }
+
                 return productDto;
             });
         }
