@@ -7,6 +7,7 @@ namespace TrendLine.Services.Interfaces
     {
         Task<IEnumerable<OrderDTO>> GetAllOrders();
         Task<OrderDTO> GetOrderById(int id);
+        Task<IEnumerable<OrderDTO>> GetOrdersByCustomerId(string customerId);
         Task CreateOrder(CreateOrderDTO orderDto, string userId);
         Task UpdateOrderStatus(string status, int id);
         Task DeleteOrder(int id);

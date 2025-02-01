@@ -17,8 +17,10 @@ namespace TrendLine.Repositories.Implementations
         public async Task<IEnumerable<Order>> GetAllOrders()
         {
             return await _context.Orders
+                .Include(o => o.Customer)
+                    .ThenInclude(c => c.User)
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(oi => oi.Product)
                 .ToListAsync();
         }
 
@@ -28,6 +30,15 @@ namespace TrendLine.Repositories.Implementations
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                 .FirstOrDefaultAsync(o => o.Id == id);
+        }
+
+        public async Task<IEnumerable<Order>> GetOrdersByCustomerId(string customerId)
+        {
+            return await _context.Orders
+                .Where(o => o.CustomerId == customerId)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                .ToListAsync();
         }
 
         public async Task AddOrder(Order order)

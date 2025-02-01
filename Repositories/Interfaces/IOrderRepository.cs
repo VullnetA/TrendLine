@@ -6,6 +6,7 @@ namespace TrendLine.Repositories.Interfaces
     {
         Task<IEnumerable<Order>> GetAllOrders();
         Task<Order> GetOrderById(int id);
+        Task<IEnumerable<Order>> GetOrdersByCustomerId(string customerId);
         Task AddOrder(Order order);
         Task UpdateOrder(Order order);
         Task DeleteOrder(int id);

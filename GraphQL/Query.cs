@@ -18,6 +18,7 @@ namespace TrendLine.GraphQL
             _customerService = customerService;
         }
 
+        // Uses RESOLVERS
         [GraphQLName("getOrders")]
         [Authorize(Roles = "Admin, Advanced User")]
         [GraphQLDescription("Fetches all placed orders.")]
@@ -51,6 +52,41 @@ namespace TrendLine.GraphQL
                 );
             }
         }
+
+        [GraphQLName("getCustomerOrders")]
+        [Authorize(Roles = "Admin, Advanced User, Customer")]
+        [GraphQLDescription("Fetches all orders for a specific customer.")]
+        public async Task<IEnumerable<OrderDTO>> GetCustomerOrders(string customerId)
+        {
+            try
+            {
+                var orders = await _orderService.GetOrdersByCustomerId(customerId);
+                if (orders == null || !orders.Any())
+                {
+                    throw new GraphQLException(
+                        ErrorBuilder.New()
+                            .SetMessage($"No orders found for Customer ID {customerId}.")
+                            .SetCode("NOT_FOUND")
+                            .SetExtension("timestamp", DateTime.UtcNow.ToString("o"))
+                            .Build()
+                    );
+                }
+
+                return orders;
+            }
+            catch (Exception ex)
+            {
+                throw new GraphQLException(
+                    ErrorBuilder.New()
+                        .SetMessage("An error occurred while fetching customer orders.")
+                        .SetCode("INTERNAL_SERVER_ERROR")
+                        .SetExtension("details", ex.Message)
+                        .SetExtension("timestamp", DateTime.UtcNow.ToString("o"))
+                        .Build()
+                );
+            }
+        }
+
 
         [GraphQLName("getDiscounts")]
         [Authorize(Roles = "Admin")]
@@ -86,6 +122,7 @@ namespace TrendLine.GraphQL
             }
         }
 
+        // Uses RESOLVERS
         [GraphQLName("getCustomers")]
         [Authorize(Roles = "Admin")]
         [GraphQLDescription("Fetches all customers.")]
