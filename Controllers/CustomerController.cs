@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 using TrendLine.DTOs;
 using TrendLine.Services.Helpers;
@@ -18,14 +19,17 @@ namespace TrendLine.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _customerService;
+        private readonly IMemoryCache _memoryCache;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CustomerController"/> class.
         /// </summary>
         /// <param name="customerService">Service for managing customers.</param>
-        public CustomerController(ICustomerService customerService)
+        /// <param name="memoryCache">Cache for storing API responses.</param>
+        public CustomerController(ICustomerService customerService, IMemoryCache memoryCache)
         {
             _customerService = customerService;
+            _memoryCache = memoryCache;
         }
 
         /// <summary>
@@ -43,11 +47,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(401)]
         public async Task<ActionResult<IEnumerable<CustomerDTO>>> GetAllCustomers()
         {
-            var response = await _customerService.GetAllCustomers();
-            if (response == null || !response.Any())
+            if (_memoryCache.TryGetValue("AllCustomers", out IEnumerable<CustomerDTO> customers))
+            {
+                return Ok(customers);
+            }
+
+            customers = await _customerService.GetAllCustomers();
+            if (customers == null || !customers.Any())
                 return ErrorHandler.NotFoundResponse(this, "No customers found");
 
-            return Ok(response);
+            _memoryCache.Set("AllCustomers", customers, TimeSpan.FromMinutes(10));
+            return Ok(customers);
         }
 
         /// <summary>
@@ -75,10 +85,16 @@ namespace TrendLine.Controllers
                 return ErrorHandler.ForbiddenResponse(this, "Access to this resource is forbidden");
             }
 
-            var customer = await _customerService.GetCustomerById(id);
+            if (_memoryCache.TryGetValue($"Customer_{id}", out CustomerDTO customer))
+            {
+                return Ok(customer);
+            }
+
+            customer = await _customerService.GetCustomerById(id);
             if (customer == null)
                 return ErrorHandler.NotFoundResponse(this, "Customer not found");
 
+            _memoryCache.Set($"Customer_{id}", customer, TimeSpan.FromMinutes(10));
             return Ok(customer);
         }
 
@@ -103,6 +119,11 @@ namespace TrendLine.Controllers
                 return ErrorHandler.NotFoundResponse(this, "Customer not found");
 
             await _customerService.DeleteCustomer(id);
+
+            // Invalidate related cache
+            _memoryCache.Remove($"Customer_{id}");
+            _memoryCache.Remove("AllCustomers");
+
             return Ok("Customer deleted successfully");
         }
     }

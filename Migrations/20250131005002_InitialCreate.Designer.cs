@@ -12,8 +12,8 @@ using TrendLine.Data;
 namespace TrendLine.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241106042636_CustomerConfig")]
-    partial class CustomerConfig
+    [Migration("20250131005002_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -313,8 +313,7 @@ namespace TrendLine.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("Customers");
                 });
@@ -551,8 +550,8 @@ namespace TrendLine.Migrations
             modelBuilder.Entity("TrendLine.Models.Customer", b =>
                 {
                     b.HasOne("TrendLine.Models.ApplicationUser", "User")
-                        .WithOne()
-                        .HasForeignKey("TrendLine.Models.Customer", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -561,8 +560,8 @@ namespace TrendLine.Migrations
 
             modelBuilder.Entity("TrendLine.Models.Order", b =>
                 {
-                    b.HasOne("TrendLine.Models.ApplicationUser", "Customer")
-                        .WithMany()
+                    b.HasOne("TrendLine.Models.Customer", "Customer")
+                        .WithMany("Orders")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -628,6 +627,11 @@ namespace TrendLine.Migrations
                     b.Navigation("Discount");
 
                     b.Navigation("Size");
+                });
+
+            modelBuilder.Entity("TrendLine.Models.Customer", b =>
+                {
+                    b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("TrendLine.Models.Order", b =>

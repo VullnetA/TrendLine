@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using TrendLine.DTOs;
 using TrendLine.Services.Helpers;
 using TrendLine.Services.Interfaces;
@@ -18,16 +19,20 @@ namespace TrendLine.Controllers
     {
         private readonly IProductService _productService;
         private readonly LinkHelper _linkHelper;
+        private readonly IMemoryCache _memoryCache;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProductController"/> class.
         /// </summary>
         /// <param name="productService">Service for product management.</param>
         /// <param name="linkHelper">Utility for generating HATEOAS links to enhance API responses with navigable actions.</param>
-        public ProductController(IProductService productService, LinkHelper linkHelper)
+        /// <param name="memoryCache">Cache for storing API responses.</param>
+        public ProductController(IProductService productService, LinkHelper linkHelper, IMemoryCache memoryCache)
         {
             _productService = productService;
             _linkHelper = linkHelper;
+            _memoryCache = memoryCache;
         }
 
         /// <summary>
@@ -38,12 +43,17 @@ namespace TrendLine.Controllers
         /// <response code="401">Unauthorized access.</response>
         [HttpGet]
         [MapToApiVersion("1.0")]
-        [Authorize(Roles = "Admin, Advanced User, Simple User, Customer")]
+        //[Authorize(Roles = "Admin, Advanced User, Simple User, Customer")]
         [ProducesResponseType(typeof(IEnumerable<ProductDTO>), 200)]
         [ProducesResponseType(401)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetAllProducts()
         {
-            var products = await _productService.GetAllProducts();
+            if (_memoryCache.TryGetValue("AllProducts", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.GetAllProducts();
 
             if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, "No products found");
@@ -62,6 +72,8 @@ namespace TrendLine.Controllers
                 );
             }
 
+            _memoryCache.Set("AllProducts", products, TimeSpan.FromMinutes(10));
+
             return Ok(products);
         }
 
@@ -79,7 +91,12 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<ProductDTO>> GetProductById(int id)
         {
-            var product = await _productService.GetProductById(id);
+            if (_memoryCache.TryGetValue($"Product_{id}", out ProductDTO product))
+            {
+                return Ok(product);
+            }
+
+            product = await _productService.GetProductById(id);
 
             if (product == null)
                 return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
@@ -99,6 +116,7 @@ namespace TrendLine.Controllers
                 userRoles
             );
 
+            _memoryCache.Set($"Product_{id}", product, TimeSpan.FromMinutes(10));
             return Ok(product);
         }
 
@@ -117,6 +135,7 @@ namespace TrendLine.Controllers
         public async Task<ActionResult> AddProduct(AddProductDTO addProduct)
         {
             await _productService.AddProduct(addProduct);
+            _memoryCache.Remove("AllProducts");
             return Ok("Product added successfully");
         }
 
@@ -139,6 +158,8 @@ namespace TrendLine.Controllers
                 return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
 
             await _productService.DeleteProduct(id);
+            _memoryCache.Remove("AllProducts");
+            _memoryCache.Remove($"Product_{id}");
             return Ok("Product removed successfully");
         }
 
@@ -156,6 +177,8 @@ namespace TrendLine.Controllers
         public async Task<ActionResult> UpdateProduct(EditProductDTO editProduct, int id)
         {
             await _productService.UpdateProduct(editProduct, id);
+            _memoryCache.Remove("AllProducts");
+            _memoryCache.Remove($"Product_{id}");
             return Ok("Product updated successfully");
         }
 
@@ -173,11 +196,18 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByCategory(string category)
         {
-            var response = await _productService.FindByCategory(category);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductsByCategory_{category}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.FindByCategory(category);
+
+            if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No products found in category '{category}'");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductsByCategory_{category}", products, TimeSpan.FromMinutes(10));
+            return Ok(products);
         }
 
         /// <summary>
@@ -194,11 +224,18 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByBrand(string brand)
         {
-            var response = await _productService.FindByBrand(brand);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductsByBrand_{brand}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.FindByBrand(brand);
+
+            if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No products found for brand '{brand}'");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductsByBrand_{brand}", products, TimeSpan.FromMinutes(10));
+            return Ok(products);
         }
 
         /// <summary>
@@ -215,11 +252,18 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByGender(string gender)
         {
-            var response = await _productService.FindByGender(gender);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductsByGender_{gender}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.FindByGender(gender);
+
+            if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No products found for gender '{gender}'");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductsByGender_{gender}", products, TimeSpan.FromMinutes(10));
+            return Ok(products);
         }
 
         /// <summary>
@@ -237,11 +281,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByPriceRange(double minPrice, double maxPrice)
         {
-            var response = await _productService.FindByPriceRange(minPrice, maxPrice);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductsByPriceRange_{minPrice}_{maxPrice}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.FindByPriceRange(minPrice, maxPrice);
+            if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No products found in the price range {minPrice} - {maxPrice}");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductsByPriceRange_{minPrice}_{maxPrice}", products, TimeSpan.FromMinutes(10));
+            return Ok(products);
         }
 
         /// <summary>
@@ -258,11 +308,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsBySize(string size)
         {
-            var response = await _productService.FindBySize(size);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductsBySize_{size}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.FindBySize(size);
+            if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No products found for size '{size}'");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductsBySize_{size}", products, TimeSpan.FromMinutes(10));
+            return Ok(products);
         }
 
         /// <summary>
@@ -279,11 +335,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProductsByColor(string color)
         {
-            var response = await _productService.FindByColor(color);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductsByColor_{color}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.FindByColor(color);
+            if (products == null || !products.Any())
                 return ErrorHandler.NotFoundResponse(this, $"No products found for color '{color}'");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductsByColor_{color}", products, TimeSpan.FromMinutes(10));
+            return Ok(products);
         }
 
         /// <summary>
@@ -298,8 +360,14 @@ namespace TrendLine.Controllers
         [ProducesResponseType(typeof(long), 200)]
         public async Task<ActionResult<long>> CountProductsByCategory(string category)
         {
-            var response = await _productService.CountByCategory(category);
-            return Ok(response);
+            if (_memoryCache.TryGetValue($"CountByCategory_{category}", out long count))
+            {
+                return Ok(count);
+            }
+
+            count = await _productService.CountByCategory(category);
+            _memoryCache.Set($"CountByCategory_{category}", count, TimeSpan.FromMinutes(10));
+            return Ok(count);
         }
 
         /// <summary>
@@ -314,8 +382,14 @@ namespace TrendLine.Controllers
         [ProducesResponseType(typeof(long), 200)]
         public async Task<ActionResult<long>> CountProductsByBrand(string brand)
         {
-            var response = await _productService.CountByBrand(brand);
-            return Ok(response);
+            if (_memoryCache.TryGetValue($"CountByBrand_{brand}", out long count))
+            {
+                return Ok(count);
+            }
+
+            count = await _productService.CountByBrand(brand);
+            _memoryCache.Set($"CountByBrand_{brand}", count, TimeSpan.FromMinutes(10));
+            return Ok(count);
         }
 
         /// <summary>
@@ -329,8 +403,14 @@ namespace TrendLine.Controllers
         [ProducesResponseType(typeof(long), 200)]
         public async Task<ActionResult<long>> CountAvailableProducts()
         {
-            var response = await _productService.CountByAvailability();
-            return Ok(response);
+            if (_memoryCache.TryGetValue("CountAvailableProducts", out long count))
+            {
+                return Ok(count);
+            }
+
+            count = await _productService.CountByAvailability();
+            _memoryCache.Set("CountAvailableProducts", count, TimeSpan.FromMinutes(10));
+            return Ok(count);
         }
 
         /// <summary>
@@ -344,8 +424,14 @@ namespace TrendLine.Controllers
         [ProducesResponseType(typeof(long), 200)]
         public async Task<ActionResult<long>> CountOutOfStockProducts()
         {
-            var response = await _productService.CountOutOfStock();
-            return Ok(response);
+            if (_memoryCache.TryGetValue("CountOutOfStockProducts", out long count))
+            {
+                return Ok(count);
+            }
+
+            count = await _productService.CountOutOfStock();
+            _memoryCache.Set("CountOutOfStockProducts", count, TimeSpan.FromMinutes(10));
+            return Ok(count);
         }
 
         /// <summary>
@@ -362,11 +448,17 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<ProductQuantityDTO>> GetQuantity(int id)
         {
-            var response = await _productService.GetProductQuantity(id);
-            if (response == null)
+            if (_memoryCache.TryGetValue($"ProductQuantity_{id}", out ProductQuantityDTO quantity))
+            {
+                return Ok(quantity);
+            }
+
+            quantity = await _productService.GetProductQuantity(id);
+            if (quantity == null)
                 return ErrorHandler.NotFoundResponse(this, $"Product with ID {id} not found");
 
-            return Ok(response);
+            _memoryCache.Set($"ProductQuantity_{id}", quantity, TimeSpan.FromMinutes(10));
+            return Ok(quantity);
         }
 
         /// <summary>
@@ -389,6 +481,10 @@ namespace TrendLine.Controllers
                 return ErrorHandler.BadRequestResponse(this, "Quantity cannot be negative.");
             }
 
+            _memoryCache.Remove("AllProducts");
+            _memoryCache.Remove($"Product_{id}");
+            _memoryCache.Remove($"ProductQuantity_{id}");
+
             await _productService.UpdateQuantity(id, updateQuantity.Quantity);
             return Ok("Product quantity updated successfully.");
         }
@@ -407,12 +503,18 @@ namespace TrendLine.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> SearchProducts([FromQuery] ProductSearchDTO searchParams)
         {
-            var products = await _productService.SearchProducts(searchParams);
+            if (_memoryCache.TryGetValue($"SearchProducts_{string.Join("_", searchParams.GetType().GetProperties().Select(p => p.GetValue(searchParams)))}", out IEnumerable<ProductDTO> products))
+            {
+                return Ok(products);
+            }
+
+            products = await _productService.SearchProducts(searchParams);
             if (products == null || !products.Any())
             {
                 return ErrorHandler.NotFoundResponse(this, "No products matched the search parameters.");
             }
 
+            _memoryCache.Set($"SearchProducts_{string.Join("_", searchParams.GetType().GetProperties().Select(p => p.GetValue(searchParams)))}", products, TimeSpan.FromMinutes(10));
             return Ok(products);
         }
     }
