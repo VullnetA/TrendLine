@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Drawing;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using SolrNet;
+using SolrNet.Attributes;
 using TrendLine.Enums;
 
 namespace TrendLine.Models
@@ -7,37 +10,54 @@ namespace TrendLine.Models
     public class Product
     {
         [Key]
+        [SolrUniqueKey("id")]
         public int Id { get; set; }
+
+        [SolrField("name")]
         public string Name { get; set; }
+
+        [SolrField("description")]
         public string Description { get; set; }
+
+        [SolrField("price")]
         public double Price { get; set; }
+
+        [SolrField("quantity")]
         public int Quantity { get; set; }
+
+        [SolrField("gender")]
         public Gender Gender { get; set; }
 
+        [SolrField("brand_id")]
         public int BrandId { get; set; }
-        public Brand Brand { get; set; }
 
+        [SolrField("category_id")]
         public int CategoryId { get; set; }
-        public Category Category { get; set; }
 
+        [SolrField("color_id")]
         public int ColorId { get; set; }
-        public Color Color { get; set; }
 
+        [SolrField("size_id")]
         public int SizeId { get; set; }
-        public Size Size { get; set; }
 
+        [SolrField("discount_id")]
         public int? DiscountId { get; set; }
+
+        // Navigation properties (Not indexed by Solr)
+        public Brand Brand { get; set; }
+        public Category Category { get; set; }
+        public Color Color { get; set; }
+        public Size Size { get; set; }
         public Discount Discount { get; set; }
+        public ICollection<OrderItem> OrderItems { get; set; }
 
         public double GetFinalPrice()
         {
             if (Discount == null || (Discount.ExpirationDate.HasValue && Discount.ExpirationDate < DateTime.UtcNow))
             {
-                // No discount or expired discount
                 return Price;
             }
 
-            // Apply discount based on percentage or fixed amount
             if (Discount.DiscountPercentage.HasValue)
             {
                 return Price * (1 - (Discount.DiscountPercentage.Value / 100));
@@ -49,7 +69,5 @@ namespace TrendLine.Models
 
             return Price;
         }
-
-        public ICollection<OrderItem> OrderItems { get; set; }
     }
 }

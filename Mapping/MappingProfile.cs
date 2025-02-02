@@ -41,9 +41,9 @@ namespace TrendLine.Mapping
             CreateMap<ProductDTO, Product>();
 
             CreateMap<Order, OrderDTO>()
-            .ForMember(dest => dest.Links, opt => opt.MapFrom<OrderLinksResolver>())
             .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems))
-            .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => src.Customer));
+            .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => src.Customer))
+            .ForMember(dest => dest.Links, opt => opt.MapFrom<OrderLinksResolver>());
 
             CreateMap<OrderDTO, Order>();
 
