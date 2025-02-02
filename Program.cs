@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using AspNetCoreRateLimit;
+using SolrNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -135,6 +136,8 @@ builder.Services.AddScoped<Mutation>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ProductLinksResolver>();
 builder.Services.AddScoped<OrderLinksResolver>();
+builder.Services.AddSolrNet<Product>("http://solr:8983/solr/clothing_shop_core");
+builder.Services.AddScoped<SolrProductService>();
 
 // GraphQL Setup
 builder.Services.AddGraphQLServer()
