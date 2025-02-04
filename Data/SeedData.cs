@@ -51,7 +51,7 @@ namespace TrendLine.Data
     {
         new Product
         {
-            Id = 1,
+            Id = 100,
             Name = "Classic Denim Jacket",
             Description = "Timeless denim jacket with a comfortable fit and vintage wash",
             Price = 89.99,
@@ -64,7 +64,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 2,
+            Id = 101,
             Name = "Performance Running Shoes",
             Description = "Lightweight running shoes with responsive cushioning and breathable mesh",
             Price = 129.99,
@@ -77,7 +77,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 3,
+            Id = 102,
             Name = "Athleisure Hoodie",
             Description = "Comfortable cotton-blend hoodie perfect for workouts or casual wear",
             Price = 65.99,
@@ -90,7 +90,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 4,
+            Id = 103,
             Name = "Business Blazer",
             Description = "Tailored fit blazer suitable for professional settings",
             Price = 149.99,
@@ -103,7 +103,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 5,
+            Id = 104,
             Name = "Winter Parka",
             Description = "Warm and water-resistant parka with faux fur hood",
             Price = 199.99,
@@ -116,7 +116,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 6,
+            Id = 105,
             Name = "Sport Training Pants",
             Description = "Moisture-wicking training pants with zippered pockets",
             Price = 49.99,
@@ -129,7 +129,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 7,
+            Id = 106,
             Name = "Casual Summer Dress",
             Description = "Light and breezy summer dress with floral pattern",
             Price = 79.99,
@@ -142,7 +142,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 8,
+            Id = 107,
             Name = "Classic Sneakers",
             Description = "Versatile everyday sneakers with comfortable insoles",
             Price = 89.99,
@@ -155,7 +155,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 9,
+            Id = 108,
             Name = "Formal Trousers",
             Description = "Tailored formal trousers with straight fit",
             Price = 89.99,
@@ -168,7 +168,7 @@ namespace TrendLine.Data
         },
         new Product
         {
-            Id = 10,
+            Id = 109,
             Name = "Autumn Sweater",
             Description = "Cozy knit sweater perfect for fall weather",
             Price = 59.99,

@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using AspNetCoreRateLimit;
 using SolrNet;
+using Prometheus;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -130,9 +131,9 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IDiscountService, DiscountService>();
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<LinkHelper>();
 builder.Services.AddScoped<Query>();
 builder.Services.AddScoped<Mutation>();
+builder.Services.AddScoped<LinkHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ProductLinksResolver>();
 builder.Services.AddScoped<OrderLinksResolver>();
@@ -271,5 +272,7 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok("Healthy"))
    .WithName("HealthCheck")
    .WithOpenApi();
+app.UseMetricServer();
+app.UseHttpMetrics();
 
 app.Run();
