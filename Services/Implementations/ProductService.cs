@@ -33,11 +33,17 @@ namespace TrendLine.Services.Implementations
         public async Task<IEnumerable<ProductDTO>> GetAllProducts()
         {
             var products = await _productRepository.GetAllProducts();
-            if (products == null) return null;
+            if (products == null)
+                return null;
 
             var productDtos = products.Select(product =>
             {
-                var productDto = _mapper.Map<ProductDTO>(product, opts => opts.Items["IsSingleProduct"] = false);
+                // For listing products we want links (using the all-products context)
+                var productDto = _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                });
                 productDto.FinalPrice = CalculateFinalPrice(product);
                 return productDto;
             }).ToList();
@@ -48,9 +54,15 @@ namespace TrendLine.Services.Implementations
         public async Task<ProductDTO> GetProductById(int id)
         {
             var product = await _productRepository.GetProductById(id);
-            if (product == null) return null;
+            if (product == null)
+                return null;
 
-            var productDto = _mapper.Map<ProductDTO>(product, opts => opts.Items["IsSingleProduct"] = true);
+            // For a single product detail, we want single-product links.
+            var productDto = _mapper.Map<ProductDTO>(product, opts =>
+            {
+                opts.Items["IsSingleProduct"] = true;
+                opts.Items["IncludeLinks"] = true;
+            });
             productDto.FinalPrice = CalculateFinalPrice(product);
 
             return productDto;
@@ -64,43 +76,73 @@ namespace TrendLine.Services.Implementations
         public async Task<IEnumerable<ProductDTO>> FindByCategory(string category)
         {
             var products = await _productRepository.FindByCategory(category);
-            return products?.Select(product => _mapper.Map<ProductDTO>(product))
-                   ?? Enumerable.Empty<ProductDTO>();
+            return products?.Select(product =>
+                _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                })
+            ) ?? Enumerable.Empty<ProductDTO>();
         }
 
         public async Task<IEnumerable<ProductDTO>> FindByBrand(string brand)
         {
             var products = await _productRepository.FindByBrand(brand);
-            return products?.Select(product => _mapper.Map<ProductDTO>(product))
-                   ?? Enumerable.Empty<ProductDTO>();
+            return products?.Select(product =>
+                _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                })
+            ) ?? Enumerable.Empty<ProductDTO>();
         }
 
         public async Task<IEnumerable<ProductDTO>> FindByGender(string gender)
         {
             var products = await _productRepository.FindByGender(gender);
-            return products?.Select(product => _mapper.Map<ProductDTO>(product))
-                    ?? Enumerable.Empty<ProductDTO>();
+            return products?.Select(product =>
+                _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                })
+            ) ?? Enumerable.Empty<ProductDTO>();
         }
 
         public async Task<IEnumerable<ProductDTO>> FindByPriceRange(double minPrice, double maxPrice)
         {
             var products = await _productRepository.FindByPriceRange(minPrice, maxPrice);
-            return products?.Select(product => _mapper.Map<ProductDTO>(product))
-                    ?? Enumerable.Empty<ProductDTO>();
+            return products?.Select(product =>
+                _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                })
+            ) ?? Enumerable.Empty<ProductDTO>();
         }
 
         public async Task<IEnumerable<ProductDTO>> FindBySize(string size)
         {
             var products = await _productRepository.FindBySize(size);
-            return products?.Select(product => _mapper.Map<ProductDTO>(product))
-                    ?? Enumerable.Empty<ProductDTO>();
+            return products?.Select(product =>
+                _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                })
+            ) ?? Enumerable.Empty<ProductDTO>();
         }
 
         public async Task<IEnumerable<ProductDTO>> FindByColor(string color)
         {
             var products = await _productRepository.FindByColor(color);
-            return products?.Select(product => _mapper.Map<ProductDTO>(product))
-                   ?? Enumerable.Empty<ProductDTO>();
+            return products?.Select(product =>
+                _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                })
+            ) ?? Enumerable.Empty<ProductDTO>();
         }
 
         public async Task<long> CountByCategory(string category)
@@ -143,7 +185,11 @@ namespace TrendLine.Services.Implementations
 
             return products.Select(product =>
             {
-                var productDto = _mapper.Map<ProductDTO>(product);
+                var productDto = _mapper.Map<ProductDTO>(product, opts =>
+                {
+                    opts.Items["IsSingleProduct"] = false;
+                    opts.Items["IncludeLinks"] = true;
+                });
                 productDto.FinalPrice = CalculateFinalPrice(product);
                 return productDto;
             });
@@ -151,7 +197,8 @@ namespace TrendLine.Services.Implementations
 
         private double CalculateFinalPrice(Product product)
         {
-            if (product.Discount == null || (product.Discount.ExpirationDate.HasValue && product.Discount.ExpirationDate < DateTime.UtcNow))
+            if (product.Discount == null ||
+                (product.Discount.ExpirationDate.HasValue && product.Discount.ExpirationDate < DateTime.UtcNow))
             {
                 return product.Price;
             }
