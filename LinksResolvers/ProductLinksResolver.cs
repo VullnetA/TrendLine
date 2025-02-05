@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using TrendLine.DTOs;
 using TrendLine.Models;
+using System.Security.Claims;
 
 namespace TrendLine.LinksResolvers
 {
@@ -18,21 +19,38 @@ namespace TrendLine.LinksResolvers
         public List<Link> Resolve(Product source, ProductDTO destination, List<Link> destMember, ResolutionContext context)
         {
             var httpContext = _httpContextAccessor.HttpContext;
-
             if (httpContext == null)
             {
                 throw new InvalidOperationException("HttpContext is null.");
             }
 
-            // Extract user roles
-            var userRoles = httpContext.User.FindAll(System.Security.Claims.ClaimTypes.Role)
-                                .Select(role => role.Value)
-                                .ToList();
-
-            // Determine which method to call based on context
-            if (context.Items.TryGetValue("IsSingleProduct", out var isSingleProduct) && isSingleProduct is bool singleProduct && singleProduct)
+            // Default behavior: do NOT include links.
+            bool includeLinks = false;
+            if (context.TryGetItems != null &&
+                context.Items.TryGetValue("IncludeLinks", out var includeLinksObj) &&
+                includeLinksObj is bool flag)
             {
-                // Single Product Context
+                includeLinks = flag;
+            }
+
+            // If links are not explicitly enabled, return an empty list.
+            if (!includeLinks)
+            {
+                return new List<Link>();
+            }
+
+            // Extract user roles from the HTTP context.
+            var userRoles = httpContext.User
+                .FindAll(ClaimTypes.Role)
+                .Select(role => role.Value)
+                .ToList();
+
+            // Check for a single-product context using the "IsSingleProduct" flag.
+            if (context.TryGetItems != null &&
+                context.Items.TryGetValue("IsSingleProduct", out var isSingleProductObj) &&
+                isSingleProductObj is bool singleProduct && singleProduct)
+            {
+                // Generate links for a single product.
                 return _linkHelper.GenerateProductLinksForSingleProduct(
                     httpContext,
                     source.Id,
@@ -45,7 +63,7 @@ namespace TrendLine.LinksResolvers
                 );
             }
 
-            // All Products Context
+            // Generate links for the all-products context.
             return _linkHelper.GenerateProductLinksForAllProducts(
                 httpContext,
                 source.Id,
@@ -53,6 +71,5 @@ namespace TrendLine.LinksResolvers
                 userRoles
             );
         }
-
     }
 }

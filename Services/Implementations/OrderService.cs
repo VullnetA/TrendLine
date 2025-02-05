@@ -41,7 +41,7 @@ namespace TrendLine.Services.Implementations
 
         public async Task CreateOrder(CreateOrderDTO orderDto, string userId)
         {
-            var customer = await _customerRepository.GetCustomerById(userId);
+            var customer = await _customerRepository.GetCustomerByTokenId(userId);
             if (customer == null)
             {
                 throw new InvalidOperationException("Customer not found for the given user.");
